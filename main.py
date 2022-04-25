@@ -43,6 +43,7 @@ gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
 gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
 gsc_hs_temp = 105.0  # Heatsink temperature in °C
+gsc_status = 0  # status
 
 
 def create_serial_list():
@@ -173,8 +174,10 @@ def set_gsc_vbus(lst):
     global builder, gsc_vbus, gsc_vbus_peak
     gsc_vbus = float(lst[1])
     builder.get_object('gsc_vbus').set_text(lst[1])
-    builder.get_object('gsc_vbus_level').set_value(float(lst[1])/gsc_vbus_peak)
-
+    try:
+        builder.get_object('gsc_vbus_level').set_value(float(lst[1])/gsc_vbus_peak)
+    except ZeroDivisionError:
+        builder.get_object('gsc_vbus_level').set_value(0.0)
 
 def set_gsc_vbus_peak(lst):
     """Set maximum allowed vbus voltage."""
@@ -210,17 +213,20 @@ def set_gsc_power(lst):
     """Set GSC active power."""
     global builder, gsc_power
     gsc_power = float(lst[1])
-    builder.get_object('gsc_power').set_text('{}k'.format(gsc_power/1e3))
-    builder.get_object('gsc_power_level').set_value(gsc_power / gsc_power_max)
+    builder.get_object('gsc_power').set_text('{:.0f}k'.format(gsc_power/1e3))
+    try:
+        builder.get_object('gsc_power_level').set_value(gsc_power / gsc_power_max)
+    except ZeroDivisionError:
+        builder.get_object('gsc_power_level').set_value(0.0)
 
 
 def set_gsc_power_nom(lst):
     """Set grid side converter nominal and maximum power."""
     global builder, gsc_power_nom, gsc_power_max
     gsc_power_nom = float(lst[1])
-    builder.get_object('gsc_power_nom').set_text('{}'.format(gsc_power_nom))
+    builder.get_object('gsc_power_nom').set_text('{:.1f}'.format(gsc_power_nom))
     gsc_power_max = 1.1 * gsc_power_nom
-    builder.get_object('gsc_power_max').set_text('{}k'.format(gsc_power_max/1e3))
+    builder.get_object('gsc_power_max').set_text('{:.1f}k'.format(gsc_power_max/1e3))
 
 
 def set_gsc_vgrid_imbalance(lst):
@@ -237,15 +243,21 @@ def set_gsc_reactive_power(lst):
     builder.get_object('gsc_reactive_power').set_text('{:.1f}k'.format(gsc_reactive_power/1e3))
     reactive_power_max = 0.329 * gsc_power_nom
     builder.get_object('gsc_reactive_power_max').set_text('{:.1f}k'.format(reactive_power_max/1e3))
-    builder.get_object('gsc_reactive_power_level').set_value(gsc_reactive_power / reactive_power_max)
+    try:
+        builder.get_object('gsc_reactive_power_level').set_value(gsc_reactive_power / reactive_power_max)
+    except ZeroDivisionError:
+        builder.get_object('gsc_reactive_power_level').set_value(0.0)
 
 
 def set_gsc_i_line(lst):
     """Set GSC line current to grid."""
     global builder, gsc_i_line
     gsc_i_line = float(lst[1])
-    builder.get_object('gsc_i_line').set_text('{:.0f}'.format(gsc_i_line))
-    builder.get_object('gsc_i_line_level').set_value((gsc_i_line * math.sqrt(2)) / gsc_i_max_p)
+    builder.get_object('gsc_i_line').set_text('{:.1f}'.format(gsc_i_line))
+    try:
+        builder.get_object('gsc_i_line_level').set_value((gsc_i_line * math.sqrt(2)) / gsc_i_max_p)
+    except ZeroDivisionError:
+        builder.get_object('gsc_i_line_level').set_value(0.0)
 
 
 def set_gsc_hs_temp(lst):
@@ -255,9 +267,18 @@ def set_gsc_hs_temp(lst):
     builder.get_object('gsc_hs_temp').set_text('{:.0f}'.format(gsc_hs_temp))
 
 
+def set_gsc_status(lst):
+    """Set status."""
+    global builder, gsc_status
+    gsc_status = int(lst[1])
+    pll_good = gsc_status & (1 << 2)  # TODO: right value is BIT 6
+    builder.get_object('gsc_pll_good').set_active(pll_good)
+
+
 callbacks = [['version-id', set_version],
              ['gsc_vbus', set_gsc_vbus],
              ['gsc_vbus_peak', set_gsc_vbus_peak],
+             ['gsc_status', set_gsc_status],
              ['gsc_i_max_p', set_gsc_i_max_p],
              ['gsc_vgrid', set_gsc_vgrid],
              ['gsc_vgrid_nom', set_gsc_vgrid_nom],
