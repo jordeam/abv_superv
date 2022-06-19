@@ -77,14 +77,14 @@ def rad2rpm(rad):
 
 def serial_write(s):
     """Fuck Wrapper to serial write function."""
-    if ser:
+    if ser.isOpen():
         with ser_mutex:
             ser.write(s)
 
 
 def serial_read():
     """Fuck Wrapper to serial read function."""
-    if ser:
+    if ser.isOpen():
         return ser.readline()
     return ''
 
@@ -126,7 +126,7 @@ def serial_reset():
 def serial_disconnect():
     """Properly disconect serial flushing data."""
     global ser_name
-    if ser:
+    if ser.isOpen():
         ser.flushInput()
         ser.flushOutput()
         ser.close()
@@ -158,8 +158,7 @@ class Handler:
 
     def on_get_version_clicked(self, _):
         """Show version."""
-        if ser:
-            serial_write(b'version-id\r\n')
+        serial_write(b'version-id\r\n')
 
     def on_disconnect_clicked(self, _):
         """Act when disconnect button is clecked."""
@@ -182,9 +181,12 @@ class Handler:
         serial_write('gsc_adc_raw {}'.format("1" if GSC_adc_raw else "0"))
 
     def on_msc_mode_changed(self, combo):
+        """Machine operation mode: if stopped, motor or generator."""
         i = combo.get_active()
-        if (0 <= i <= 3):
+        if 0 <= i <= 3:
             serial_write('msc_mode {}'.format(i))
+        else:
+            print('ERROR: invalid value for msc_mode')
 
 
 def set_version(ver):
@@ -374,7 +376,7 @@ def serial_read_thread():
     state = False
     # l = b''
     while True:
-        if ser:
+        if ser.isOpen():
             serial_interpret()
         else:
             # if it needs to access Gtk widgets:
