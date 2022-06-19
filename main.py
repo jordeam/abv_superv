@@ -76,21 +76,21 @@ def rad2rpm(rad):
 
 
 def serial_write(s):
-    """Fuck Wrapper to serial write function."""
+    """Safe wrapper to serial write function."""
     if ser.isOpen():
         with ser_mutex:
             ser.write(s)
 
 
 def serial_read():
-    """Fuck Wrapper to serial read function."""
+    """Safe wrapper to serial read function."""
     if ser.isOpen():
         return ser.readline()
     return ''
 
 
 def serial_open(name):
-    """Fuck Wrapper to serial open function, that verify other files."""
+    """Safe wrapper to serial open function, that verify other files."""
     global ser, serial_name
     print('serial_name={}'.format(name))
     if ser.isOpen():
