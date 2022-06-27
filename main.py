@@ -24,6 +24,62 @@ from gi.repository import Gtk, GLib
 SPEED_MAX = 1200
 CURRENT_MAX = 50.0
 
+
+class mySerial:
+    """
+    Class to agroup serial status vars.
+    """
+    name: str
+    ser: serial.Serial
+    dev_list: list
+    mut: Lock
+
+    def __init__(self):
+        self.mut = Lock()
+        self.ser = serial.Serial()
+        self.dev_list = []
+
+    def write(self, s):
+        """Safe wrapper to serial write function."""
+        if self.ser.isOpen():
+            with self.mut:
+                ser.write(s)
+
+    def serial_read(self):
+        """Safe wrapper to serial read function."""
+        if self.ser.isOpen():
+            return ser.readline()
+        return ''
+
+    def serial_open(self, name_):
+        """
+        Safe wrapper to serial open function, that verify other files.
+        TODO: need to decouple gtk objects from here.
+        """
+        print('serial_name={}'.format(name_))
+        if self.ser.isOpen():
+            self.ser.close()
+        try:
+            self.ser = serial.Serial(name_, 115200, timeout=1)
+        except serial.SerialException:
+            self.ser.close()
+            print(f'ERRO: opening serial {name_}')
+        version = builder.get_object('version')
+        version.set_text('Version: ?????')
+        serial_status = builder.get_object('serial_status')
+        if self.ser.isOpen():
+            print('Serial {} openned successfuly'.format(name_))
+            serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
+            print('Serial device changed')
+            self.ser.write(b'version-id\r\n')
+            self.name = name_
+            builder.get_object('serial_device').set_sensitive(False)
+            builder.get_object('connect').set_sensitive(False)
+            builder.get_object('disconnect').set_sensitive(True)
+        else:
+            serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
+
+
 ser_name = ''
 ser = serial.Serial()
 serial_list = []
