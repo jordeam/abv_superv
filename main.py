@@ -24,6 +24,9 @@ from gi.repository import Gtk, GLib
 SPEED_MAX = 1200
 CURRENT_MAX = 50.0
 
+USB_max = 4  # Maximum number of serial USB devices to search for
+S_max = 4  # Maximum number of standard serial devices to search for
+
 
 class mySerial:
     """
@@ -33,25 +36,43 @@ class mySerial:
     ser: serial.Serial
     dev_list: list
     mut: Lock
+    builder: Gtk.Builder
+    callbacks: list
 
-    def __init__(self):
+    def __init__(self, builder, callbacks):
         self.mut = Lock()
+        self.name = ''
         self.ser = serial.Serial()
         self.dev_list = []
+        self.builder = builder
+        self.callbacks = callbacks
+
+    def create_list(self):
+        """Return a list of serial devices available."""
+        # clean serial_list
+        self.dev_list = []
+        for i in range(USB_max):
+            filename = '/dev/ttyUSB' + str(i)
+            if Path(filename).exists():
+                self.dev_list.append(filename)
+        for i in range(S_max):
+            filename = '/dev/ttyS' + str(i)
+            if Path(filename).exists():
+                self.dev_list.append(filename)
 
     def write(self, s):
         """Safe wrapper to serial write function."""
         if self.ser.isOpen():
             with self.mut:
-                ser.write(s)
+                self.ser.write(s)
 
-    def serial_read(self):
+    def read(self):
         """Safe wrapper to serial read function."""
         if self.ser.isOpen():
-            return ser.readline()
+            return self.ser.readline()
         return ''
 
-    def serial_open(self, name_):
+    def open(self, name_):
         """
         Safe wrapper to serial open function, that verify other files.
         TODO: need to decouple gtk objects from here.
@@ -64,30 +85,78 @@ class mySerial:
         except serial.SerialException:
             self.ser.close()
             print(f'ERRO: opening serial {name_}')
-        version = builder.get_object('version')
+        version = self.builder.get_object('version')
         version.set_text('Version: ?????')
-        serial_status = builder.get_object('serial_status')
+        serial_status = self.builder.get_object('serial_status')
         if self.ser.isOpen():
             print('Serial {} openned successfuly'.format(name_))
             serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
             print('Serial device changed')
             self.ser.write(b'version-id\r\n')
             self.name = name_
-            builder.get_object('serial_device').set_sensitive(False)
-            builder.get_object('connect').set_sensitive(False)
-            builder.get_object('disconnect').set_sensitive(True)
+            self.builder.get_object('serial_device').set_sensitive(False)
+            self.builder.get_object('connect').set_sensitive(False)
+            self.builder.get_object('disconnect').set_sensitive(True)
         else:
             serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
 
+    def serial_reset(self):
+        """Reset ESP32 with Reset pin connected to DTR."""
+        self.ser.dtr = True
+        print('Serial RESET clicked')
+        self.ser.dtr = False
 
-ser_name = ''
-ser = serial.Serial()
-serial_list = []
-serial_name = ''
-ser_mutex = Lock()
+    def disconnect(self):
+        """Properly disconect serial flushing data."""
+        global ser_name
+        if self.ser.isOpen():
+            self.ser.flushInput()
+            self.ser.flushOutput()
+            self.ser.close()
+            self.name = ''
 
-USB_max = 4
-S_max = 4
+    def interpret(self):
+        """Interpret commands from serial device."""
+        while True:
+            ll = self.read().strip()
+            if len(ll) < 1:
+                break
+            try:
+                lst = ll.decode('utf-8').strip().split(' ')
+                f = filter(None, lst)
+                lst = list(f)
+                print(f'l = {ll}')
+            except UnicodeDecodeError:
+                lst = []
+            if len(lst) > 0:
+                for pair in self.callbacks:
+                    if lst[0] == pair[0]:
+                        GLib.idle_add(pair[1], lst)
+
+    def read_thread(self):
+        """Read serial and calls interpret function."""
+        state = False
+        # l = b''
+        while True:
+            if self.ser.isOpen():
+                self.interpret()
+            else:
+                # if it needs to access Gtk widgets:
+                # GLib.idle_add(serial_status_blink, state)
+                state = not state
+                time.sleep(0.5)
+
+    def write_thread(self):
+        """Write serial commands. TODO: the commands."""
+        while True:
+            time.sleep(1)
+
+
+# ser_name = ''
+# ser = serial.Serial()
+# serial_list = []
+# serial_name = ''
+# ser_mutex = Lock()
 
 # Gloabl parameters
 gsc_vbus_peak = 800.0
@@ -111,86 +180,19 @@ gsc_status = 0  # status
 GSC_adc_raw = False  # if True, GSC must send ADC raw data values
 
 
-def create_serial_list():
-    """Return a list of serial devices available."""
-    global serial_list
-    # clean serial_list
-    serial_list = []
-    for i in range(USB_max):
-        filename = '/dev/ttyUSB' + str(i)
-        if Path(filename).exists():
-            serial_list.append(filename)
-    for i in range(S_max):
-        filename = '/dev/ttyS' + str(i)
-        if Path(filename).exists():
-            serial_list.append(filename)
-
-
 def rad2rpm(rad):
     """Convert radian value to degree value."""
     return 30 * rad / math.pi
 
 
-def serial_write(s):
-    """Safe wrapper to serial write function."""
-    if ser.isOpen():
-        with ser_mutex:
-            ser.write(s)
-
-
-def serial_read():
-    """Safe wrapper to serial read function."""
-    if ser.isOpen():
-        return ser.readline()
-    return ''
-
-
-def serial_open(name):
-    """Safe wrapper to serial open function, that verify other files."""
-    global ser, serial_name
-    print('serial_name={}'.format(name))
-    if ser.isOpen():
-        ser.close()
-    try:
-        ser = serial.Serial(name, 115200, timeout=1)
-    except serial.SerialException:
-        ser.close()
-        print(f'ERRO: opening serial {name}')
-    version = builder.get_object('version')
-    version.set_text('Version: ?????')
-    serial_status = builder.get_object('serial_status')
-    if ser.isOpen():
-        print('Serial {} openned successfuly'.format(name))
-        serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
-        print('Serial device changed')
-        ser.write(b'version-id\r\n')
-        serial_name = name
-        builder.get_object('serial_device').set_sensitive(False)
-        builder.get_object('connect').set_sensitive(False)
-        builder.get_object('disconnect').set_sensitive(True)
-    else:
-        serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
-
-
-def serial_reset():
-    """Reset ESP32 with Reset pin connected to DTR."""
-    ser.dtr = True
-    print('Serial RESET clicked')
-    ser.dtr = False
-
-
-def serial_disconnect():
-    """Properly disconect serial flushing data."""
-    global ser_name
-    if ser.isOpen():
-        ser.flushInput()
-        ser.flushOutput()
-        ser.close()
-        ser_name = ''
-
-
 class Handler:
     """Main handler for GTK interface."""
+    builder: Gtk.Builder
+
+    def __init__(self, builder):
+        self.builder = builder
+        entry_mode = self.builder.get_object('msc_mode')
+        entry_mode.set_text('Stopped')
 
     def onDestroy(self, _):
         """Destroy loops."""
@@ -202,7 +204,7 @@ class Handler:
 
     def on_ser_reset_clicked(self, _):
         """Print."""
-        serial_reset()
+        myser.reset()
 
     def on_set_dc_clicked(self, _):
         """Print."""
@@ -214,35 +216,50 @@ class Handler:
 
     def on_get_version_clicked(self, _):
         """Show version."""
-        serial_write(b'version-id\r\n')
+        myser.write(b'version-id\r\n')
 
     def on_disconnect_clicked(self, _):
         """Act when disconnect button is clecked."""
-        serial_disconnect()
-        builder.get_object('serial_device').set_sensitive(True)
-        builder.get_object('connect').set_sensitive(True)
-        builder.get_object('disconnect').set_sensitive(False)
-        builder.get_object('version').set_text('Version: XXXXX')
+        myser.disconnect()
+        self.builder.get_object('serial_device').set_sensitive(True)
+        self.builder.get_object('connect').set_sensitive(True)
+        self.builder.get_object('disconnect').set_sensitive(False)
+        self.builder.get_object('version').set_text('Version: XXXXX')
 
     def on_connect_clicked(self, _):
         """Connect to serial when button is clicked."""
-        combo = builder.get_object('serial_device')
-        serial_open(combo.get_active_text())
+        combo = self.builder.get_object('serial_device')
+        myser.open(combo.get_active_text())
 
     def on_gsc_adc_raw_toggled(self, wdg):
         """Enable raw data CAN commando for GSC."""
         global GSC_adc_raw
         GSC_adc_raw = wdg.get_active()
         print("GSC_adc_raw={}".format("1" if GSC_adc_raw else "0"))
-        serial_write('gsc_adc_raw {}'.format("1" if GSC_adc_raw else "0"))
+        myser.write('gsc_adc_raw {}'.format("1" if GSC_adc_raw else "0"))
 
+    #
+    # MSC
+    #
     def on_msc_mode_changed(self, combo):
         """Machine operation mode: if stopped, motor or generator."""
         i = combo.get_active()
         if 0 <= i <= 3:
-            serial_write('msc_mode {}'.format(i))
+            myser.write('msc_mode {}'.format(i))
         else:
             print('ERROR: invalid value for msc_mode')
+
+    def on_msc_stop_clicked(self, btn):
+        entry_mode = self.builder.get_object('msc_mode')
+        entry_mode.set_text('Stopped')
+
+    def on_msc_motor_clicked(self, btn):
+        entry_mode = self.builder.get_object('msc_mode')
+        entry_mode.set_text('Motor')
+
+    def on_msc_generator_clicked(self, btn):
+        entry_mode = self.builder.get_object('msc_mode')
+        entry_mode.set_text('Generator')
 
 
 def set_version(ver):
@@ -408,66 +425,29 @@ callbacks = [['version-id', set_version],
              ['gsc_adc_3', set_gsc_adc_3]]
 
 
-def serial_interpret():
-    """Interpret commands from serial device."""
-    while True:
-        ll = serial_read().strip()
-        if len(ll) < 1:
-            break
-        try:
-            lst = ll.decode('utf-8').strip().split(' ')
-            f = filter(None, lst)
-            lst = list(f)
-            print(f'l = {ll}')
-        except UnicodeDecodeError:
-            lst = []
-        if len(lst) > 0:
-            for pair in callbacks:
-                if lst[0] == pair[0]:
-                    GLib.idle_add(pair[1], lst)
-
-
-def serial_read_thread():
-    """Read serial and calls interpret function."""
-    state = False
-    # l = b''
-    while True:
-        if ser.isOpen():
-            serial_interpret()
-        else:
-            # if it needs to access Gtk widgets:
-            # GLib.idle_add(serial_status_blink, state)
-            state = not state
-            time.sleep(0.5)
-
-
-def serial_write_thread():
-    """Write serial commands."""
-    while True:
-        time.sleep(1)
-
-
 builder = Gtk.Builder()
 builder.add_from_file("main.glade")
 
-create_serial_list()
+myser = mySerial(builder, callbacks)
+
+myser.create_list()
 serial_combo = builder.get_object('serial_device')
 serial_combo.remove_all()
-for n in serial_list:
+for n in myser.dev_list:
     serial_combo.append(n, n)
 serial_combo.set_active(0)
 
-builder.connect_signals(Handler())
+builder.connect_signals(Handler(builder))
 window = builder.get_object('window1')
 window.show_all()
 
 
 # Threads go here
-r_th = Thread(target=serial_read_thread)
+r_th = Thread(target=myser.read_thread)
 r_th.daemon = True
 r_th.start()
 
-w_th = Thread(target=serial_write_thread)
+w_th = Thread(target=myser.write_thread)
 w_th.daemon = True
 w_th.start()
 
