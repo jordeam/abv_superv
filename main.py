@@ -2,7 +2,8 @@
 """
 Supervisory for GSC and MSC by means of a ESP32.
  Packages: pyserial
-."""
+.
+"""
 
 # pylint: disable=C0103,C0301,W0603,C0209
 
@@ -38,6 +39,7 @@ class mySerial:
     mut: Lock
     builder: Gtk.Builder
     callbacks: list
+    debug: bool
 
     def __init__(self, builder, callbacks):
         self.mut = Lock()
@@ -46,6 +48,7 @@ class mySerial:
         self.dev_list = []
         self.builder = builder
         self.callbacks = callbacks
+        self.debug = False
 
     def create_list(self):
         """Return a list of serial devices available."""
@@ -60,17 +63,22 @@ class mySerial:
             if Path(filename).exists():
                 self.dev_list.append(filename)
 
-    def write(self, s):
+    def write(self, s: str):
         """Safe wrapper to serial write function."""
+        if self.debug:
+            print(s)
         if self.ser.isOpen():
             with self.mut:
-                self.ser.write(s)
+                self.ser.write(s.encode('ascii'))
+        else:
+            print('ERROR: serial is not openned')
 
     def read(self):
         """Safe wrapper to serial read function."""
         if self.ser.isOpen():
             return self.ser.readline()
         return ''
+
 
     def open(self, name_):
         """
@@ -81,6 +89,8 @@ class mySerial:
         if self.ser.isOpen():
             self.ser.close()
         try:
+            if self.debug:
+                print(f'INFO: trying to open serial {name_}')
             self.ser = serial.Serial(name_, 115200, timeout=1)
         except serial.SerialException:
             self.ser.close()
@@ -102,6 +112,8 @@ class mySerial:
 
     def serial_reset(self):
         """Reset ESP32 with Reset pin connected to DTR."""
+        if self.debug:
+            print('INFO: resetting serial')
         self.ser.dtr = True
         print('Serial RESET clicked')
         self.ser.dtr = False
@@ -109,6 +121,8 @@ class mySerial:
     def disconnect(self):
         """Properly disconect serial flushing data."""
         global ser_name
+        if self.debug:
+            print('INFO: flushing serial')
         if self.ser.isOpen():
             self.ser.flushInput()
             self.ser.flushOutput()
@@ -125,7 +139,8 @@ class mySerial:
                 lst = ll.decode('utf-8').strip().split(' ')
                 f = filter(None, lst)
                 lst = list(f)
-                print(f'l = {ll}')
+                if self.debug:
+                    print(f'l = {ll}')
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:
@@ -152,13 +167,7 @@ class mySerial:
             time.sleep(1)
 
 
-# ser_name = ''
-# ser = serial.Serial()
-# serial_list = []
-# serial_name = ''
-# ser_mutex = Lock()
-
-# Gloabl parameters
+# Global parameters
 gsc_vbus_peak = 800.0
 gsc_vbus = 0.0
 gsc_vbus_max = 740.0
@@ -177,7 +186,7 @@ gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
 gsc_hs_temp = 105.0  # Heatsink temperature in °C
 gsc_status = 0  # status
-GSC_adc_raw = False  # if True, GSC must send ADC raw data values
+gsc_adc_raw = False  # if True, GSC must send ADC raw data values
 
 
 def rad2rpm(rad):
@@ -233,10 +242,9 @@ class Handler:
 
     def on_gsc_adc_raw_toggled(self, wdg):
         """Enable raw data CAN commando for GSC."""
-        global GSC_adc_raw
-        GSC_adc_raw = wdg.get_active()
-        print("GSC_adc_raw={}".format("1" if GSC_adc_raw else "0"))
-        myser.write('gsc_adc_raw {}'.format("1" if GSC_adc_raw else "0"))
+        global gsc_adc_raw
+        gsc_adc_raw = wdg.get_active()
+        myser.write('gsc_adc_raw {}'.format("1" if gsc_adc_raw else "0"))
 
     #
     # MSC
@@ -252,14 +260,20 @@ class Handler:
     def on_msc_stop_clicked(self, btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Stopped')
+        myser.write('msc_mode 0  # stopped')
 
     def on_msc_motor_clicked(self, btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Motor')
+        myser.write('msc_mode 1  # motor')
 
     def on_msc_generator_clicked(self, btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Generator')
+        myser.write('msc_mode 2  # generator')
+
+    def  on_msc_gen_auto_toggled(self, wdg):
+        myser.write('msc_gen_auto {}'.format('1' if wdg.get_active() else '0'))
 
 
 def set_version(ver):
@@ -426,10 +440,10 @@ callbacks = [['version-id', set_version],
 
 
 builder = Gtk.Builder()
-builder.add_from_file("main.glade")
+builder.add_from_file("superv.glade")
 
 myser = mySerial(builder, callbacks)
-
+myser.debug = True  # remove this to operate
 myser.create_list()
 serial_combo = builder.get_object('serial_device')
 serial_combo.remove_all()

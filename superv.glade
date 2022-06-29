@@ -499,13 +499,13 @@
                                         <property name="can-focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="GtkCheckButton" id="im_gen_auto">
+                                          <object class="GtkCheckButton" id="msc_gen_auto">
                                             <property name="label" translatable="yes">Passar para gerador automaticamente</property>
                                             <property name="visible">True</property>
                                             <property name="can-focus">True</property>
                                             <property name="receives-default">False</property>
-                                            <property name="active">True</property>
                                             <property name="draw-indicator">True</property>
+                                            <signal name="toggled" handler="on_msc_gen_auto_toggled" swapped="no"/>
                                           </object>
                                           <packing>
                                             <property name="expand">False</property>
