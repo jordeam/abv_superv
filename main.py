@@ -70,6 +70,7 @@ class mySerial:
         if self.ser.isOpen():
             with self.mut:
                 self.ser.write(s.encode('ascii'))
+                self.ser.write(b'\r\n')
         else:
             print('ERROR: serial is not openned')
 
@@ -102,7 +103,7 @@ class mySerial:
             print('Serial {} openned successfuly'.format(name_))
             serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
             print('Serial device changed')
-            self.ser.write(b'version-id\r\n')
+            self.write('version-id')
             self.name = name_
             self.builder.get_object('serial_device').set_sensitive(False)
             self.builder.get_object('connect').set_sensitive(False)
@@ -110,7 +111,7 @@ class mySerial:
         else:
             serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
 
-    def serial_reset(self):
+    def reset(self):
         """Reset ESP32 with Reset pin connected to DTR."""
         if self.debug:
             print('INFO: resetting serial')
@@ -140,7 +141,7 @@ class mySerial:
                 f = filter(None, lst)
                 lst = list(f)
                 if self.debug:
-                    print(f'l = {ll}')
+                    print(f"l = {ll.decode('utf-8')}")
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:
@@ -152,6 +153,7 @@ class mySerial:
         """Read serial and calls interpret function."""
         state = False
         # l = b''
+        print('INFO: read_thread: waiting for serial')
         while True:
             if self.ser.isOpen():
                 self.interpret()
@@ -159,11 +161,16 @@ class mySerial:
                 # if it needs to access Gtk widgets:
                 # GLib.idle_add(serial_status_blink, state)
                 state = not state
-                time.sleep(0.5)
+                print('INFO: read_thread: serial is not open')
+                time.sleep(5)
 
     def write_thread(self):
         """Write serial commands. TODO: the commands."""
         while True:
+            if not self.ser.isOpen():
+                time.sleep(2)
+                continue
+            self.write('twai')
             time.sleep(1)
 
 
@@ -225,7 +232,7 @@ class Handler:
 
     def on_get_version_clicked(self, _):
         """Show version."""
-        myser.write(b'version-id\r\n')
+        myser.write('version-id')
 
     def on_disconnect_clicked(self, _):
         """Act when disconnect button is clecked."""
@@ -420,7 +427,12 @@ def set_gsc_adc_3(lst):
     builder.get_object('gsc_adc_c4').set_text('{}'.format(lst[6] << 8 + lst[7]))
 
 
+def get_twai_data(lst):
+    print(lst)
+
+
 callbacks = [['version-id', set_version],
+             ['twai', get_twai_data],
              ['gsc_vbus', set_gsc_vbus],
              ['gsc_vbus_peak', set_gsc_vbus_peak],
              ['gsc_status', set_gsc_status],
