@@ -80,7 +80,6 @@ class mySerial:
             return self.ser.readline()
         return ''
 
-
     def open(self, name_):
         """
         Safe wrapper to serial open function, that verify other files.
@@ -279,7 +278,7 @@ class Handler:
         entry_mode.set_text('Generator')
         myser.write('msc_mode 2  # generator')
 
-    def  on_msc_gen_auto_toggled(self, wdg):
+    def on_msc_gen_auto_toggled(self, wdg):
         myser.write('msc_gen_auto {}'.format('1' if wdg.get_active() else '0'))
 
 
@@ -427,7 +426,51 @@ def set_gsc_adc_3(lst):
     builder.get_object('gsc_adc_c4').set_text('{}'.format(lst[6] << 8 + lst[7]))
 
 
+def to_hex(c):
+    """
+    Return a hex value from 0 to F, according to char c. If error, return 0 in
+    the same way.
+    """
+    if '0' <= c <= '9':
+        return ord(c) - ord('0')
+    if 'a' <= c < 'f':
+        return ord(c) - ord('a') + 10
+    if 'A' <= c <= 'F':
+        return ord(c) - ord('A') + 10
+    return 0
+
+
+def str_to_byte_array(s):
+    """
+    Convert a string s, in hexadecimal ascii (2 chars is one byte) to a byte
+    array.
+    """
+    a = []
+    for i, c in zip(range(len(s)), s):
+        if (i % 2 == 0):
+            a.append(to_hex(c) << 4)
+        else:
+            a[int(i / 2)] += to_hex(c)
+    return a
+
+
+def vbus_n_status(s):
+    """
+    Extract Vbus, Pgrid, Qgrid and staus from s.
+    """
+    global gsc_vbus
+    a = str_to_byte_array(s)
+    gsc_vbus = ((a[0] << 16) + a[1]) / 10
+    # TODO: parse other
+
+
+can_ids = [[0x040101, "Vbus P_grid Q_grid status"]]
+
+
 def get_twai_data(lst):
+    """
+    Parse data of each CAN id.
+    """
     print(lst)
 
 
