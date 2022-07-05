@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from threading import Thread, Lock
 import serial
+import struct
 
 import gi
 
@@ -31,7 +32,7 @@ S_max = 4  # Maximum number of standard serial devices to search for
 
 class mySerial:
     """
-    Class to agroup serial status vars.
+    Class to group serial status vars.
     """
     name: str
     ser: serial.Serial
@@ -185,15 +186,21 @@ gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
 gsc_power_max = 275e3  # Maximum allowed active power to be injected
 gsc_reactive_power = 90e3  # Injected reactive power in VA
+gsc_reactive_power_max = 120e3 # Maximum reactive power
 gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
+gsc_vgrid_max = 480.0 # Maximum grid voltage
 gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
 gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
 gsc_hs_temp = 105.0  # Heatsink temperature in °C
 gsc_status = 0  # status
 gsc_adc_raw = False  # if True, GSC must send ADC raw data values
-
+gsc_droop_coef = 0.04  # reactive droop coefficient
+gsc_target_fp = 1.0  # target power factor
+gsc_vgrid_imbalance = 0.01  # voltage grid imbalance
+gsc_fgrid = 59.5  # grid frequency
+gsc_fgrid_nom = 60.0  # grid nominal frequency
 
 def rad2rpm(rad):
     """Convert radian value to degree value."""
@@ -288,17 +295,6 @@ def set_version(ver):
     version.set_text('Version: {}'.format(ver[1]))
 
 
-def set_gsc_vbus(lst):
-    """Set bus voltage widget."""
-    global gsc_vbus
-    gsc_vbus = float(lst[1])
-    builder.get_object('gsc_vbus').set_text(lst[1])
-    try:
-        builder.get_object('gsc_vbus_level').set_value(float(lst[1]) / gsc_vbus_peak)
-    except ZeroDivisionError:
-        builder.get_object('gsc_vbus_level').set_value(0.0)
-
-
 def set_gsc_vbus_peak(lst):
     """Set maximum allowed vbus voltage."""
     global gsc_vbus_peak
@@ -322,24 +318,6 @@ def set_gsc_vgrid_nom(lst):
     builder.get_object('gsc_vgrid_level').add_offset_value('a', 0.8)
 
 
-def set_gsc_vgrid(lst):
-    """Set grid voltage measure."""
-    global gsc_vgrid
-    gsc_vgrid = float(lst[1])
-    builder.get_object('gsc_vgrid').set_text('{}'.format(gsc_vgrid))
-
-
-def set_gsc_power(lst):
-    """Set GSC active power."""
-    global gsc_power
-    gsc_power = float(lst[1])
-    builder.get_object('gsc_power').set_text('{:.0f}k'.format(gsc_power / 1e3))
-    try:
-        builder.get_object('gsc_power_level').set_value(gsc_power / gsc_power_max)
-    except ZeroDivisionError:
-        builder.get_object('gsc_power_level').set_value(0.0)
-
-
 def set_gsc_power_nom(lst):
     """Set grid side converter nominal and maximum power."""
     global gsc_power_nom, gsc_power_max
@@ -347,13 +325,6 @@ def set_gsc_power_nom(lst):
     builder.get_object('gsc_power_nom').set_text('{:.1f}'.format(gsc_power_nom))
     gsc_power_max = 1.1 * gsc_power_nom
     builder.get_object('gsc_power_max').set_text('{:.1f}k'.format(gsc_power_max / 1e3))
-
-
-def set_gsc_vgrid_imbalance(lst):
-    """Set voltage grid imbalance measure."""
-    global gsc_vgrid_imbalance
-    gsc_vgrid_imbalance = float(lst[1])
-    builder.get_object('gsc_vgrid_imbalance').set_text('{}'.format(100 * gsc_vgrid_imbalance))
 
 
 def set_gsc_reactive_power(lst):
@@ -380,13 +351,6 @@ def set_gsc_i_line(lst):
         builder.get_object('gsc_i_line_level').set_value(0.0)
 
 
-def set_gsc_hs_temp(lst):
-    """Set heatsink temperature."""
-    global gsc_hs_temp
-    gsc_hs_temp = float(lst[1])
-    builder.get_object('gsc_hs_temp').set_text('{:.0f}'.format(gsc_hs_temp))
-
-
 def set_gsc_status(lst):
     """Set status."""
     global gsc_status
@@ -402,76 +366,168 @@ def gsc_meas_1_2(lst):
     builder.get_object('vgc').set_text('{}'.format((lst[4] << 8 + lst[5]) / 10.0))
 
 
-def set_gsc_adc_1(lst):
-    """Set ADC group 1: ADC_A1 .. 4."""
-    builder.get_object('gsc_adc_a1').set_text('{}'.format(lst[0] << 8 + lst[1]))
-    builder.get_object('gsc_adc_a2').set_text('{}'.format(lst[2] << 8 + lst[3]))
-    builder.get_object('gsc_adc_a3').set_text('{}'.format(lst[4] << 8 + lst[5]))
-    builder.get_object('gsc_adc_a4').set_text('{}'.format(lst[6] << 8 + lst[7]))
+#
+# Old stuff above
+#
 
 
-def set_gsc_adc_2(lst):
+def builder_set(s, label, k=1, n=0):
+    """Set a GTK label with value from s, no scale."""
+    global builder
+    val = struct.unpack("!i", bytes.fromhex(s))[0] * k
+    s=f'{{:.{n}f}}'
+    builder.get_object(label).set_text(s.format(val))
+    return val
+
+
+def can_vbus_n_status(s):
+    """
+    Extract Vbus, Pgrid, Vgrid and status from s.
+    """
+    global builder, gsc_vbus, gsc_power, gsc_vgrid
+    if not len(s) == 16:
+        print(f'ERROR: can_vbus_n_status: s={s} has no 16 chars')
+    gsc_vbus = struct.unpack("!i", bytes.fromhex(s[0:2]))[0] / 10
+    gsc_power = struct.unpack("!i", bytes.fromhex(s[2:4]))[0] * 10
+    gsc_vgrid = struct.unpack("!i", bytes.fromhex(s[4:6]))[0] / 10
+    gsc_status = struct.unpack("!i", bytes.fromhex(s[6:8]))[0]
+    # set interface
+    builder.get_object('gsc_vbus')
+    builder.get_object('gsc_vbus').set_text("{:.1f}".format(gsc_vbus))
+    try:
+        builder.get_object('gsc_vbus_level').set_value(gsc_vbus / gsc_vbus_peak)
+    except ZeroDivisionError:
+        builder.get_object('gsc_vbus_level').set_value(0.0)
+    builder.get_object('gsc_power').set_text('{:.0f}k'.format(gsc_power / 1e3))
+    try:
+        builder.get_object('gsc_power_level').set_value(gsc_power / gsc_power_max)
+    except ZeroDivisionError:
+        builder.get_object('gsc_power_level').set_value(0.0)
+    builder.get_object('gsc_vgrid').set_text('{:.0f}'.format(gsc_vgrid))
+    try:
+        builder.get_object('gsc_vgrid_level').set_value(gsc_vgrid / gsc_vgrid_max)
+    except ZeroDivisionError:
+        builder.get_object('gsc_vgrid_level').set_value(0.0)
+    # PLL good
+    if gsc_status & (1 << 6):
+        builder.get_object('gsc_pll_good').set_active()
+    else:
+        builder.get_object('gsc_pll_good').set_active(False)
+    control_mode = gsc_status & 0x3
+    label = ["gsc_mode_inactive", "gsc_mode_power", "gsc_mode_reactive", "gsc_mode_droop_q"][controlmode]
+    builder.get_object(label).set_active()
+
+
+def can_hs_temp(s):
+    """
+    Heatsink temperature.
+    """
+    global builder, gsc_hs_temp
+    if not len(s) == 8:
+        print(f'ERROR: can_hs_temp: s={s} has no 8 chars')
+    gsc_hs_temp = struct.unpack("!f", bytes.fromhex(s))[0]
+
+def can_params_1_1(s):
+    """Parameters group 1 pt 1."""
+    global builder, gsc_target_fp, gsc_vgrid_nom, gsc_i_max_p, gsc_droop_coef
+    if not len(s) == 16:
+        print(f'ERROR: can_params_1_1: s={s} has no 16 chars')
+    gsc_target_fp = struct.unpack("!i", bytes.fromhex(s[0:2]))[0] / 1000
+    builder.get_object("gsc_fp_target").set_text("{:0.2f}".format(target_fp))
+    gsc_vgrid_nom = struct.unpack("!i", bytes.fromhex(s[2:4]))[0] / 10
+    builder.get_object('gsc_vgrid_nom').set_text('{:.0f}'.format(gsc_vgrid_nom))
+    gsc_i_max_p = struct.unpack("!i", bytes.fromhex(s[4:6]))[0] / 10
+    builder.get_object('gsc_i_max').set_text('{:.0f}'.format(gsc_i_max_p))
+    gsc_droop_coef = struct.unpack("!i", bytes.fromhex(s[6:8]))[0] / 1000
+    builder.get_object('droop_val').set_text('{:.1f}'.format(gsc_droop_coef * 100))
+
+
+def can_params_1_2(s):
+    """Parameters group 1 pt 2."""
+    global builder, gsc_power_nom, gsc_vbus_peak
+    if not len(s) == 8:
+        print(f'ERROR: can_params_1_2: s={s} has no 8 chars')
+    gsc_power_nom = builder_set(s[0:2], 'gsc_power_nom', 10)
+    gsc_vbus_peak = builder_set(s[2:4], 'gsc_vbus_peak', 10)
+
+
+def can_meas_1_1(s):
+    """Measures group 1 pt 1."""
+    global builder, gsc_reactive_power, gsc_reactive_power_max, gsc_vgrid_imbalance, gsc_i_line, gsc_i_max_p, gsc_fgrid
+    if not len(s) == 16:
+        print(f'ERROR: can_meas_1_1: s={s} has no 16 chars')
+    gsc_reactive_power = struct.unpack("!i", bytes.fromhex(s[0:2]))[0] * 10
+    builder.get_object('gsc_reactive_power').set_text('{:.1f}k'.format(gsc_reactive_power / 1e3))
+    gsc_reactive_power_max = 0.329 * gsc_power_nom
+    builder.get_object('gsc_reactive_power_max').set_text('{:.1f}k'.format(reactive_power_max / 1e3))
+    try:
+        builder.get_object('gsc_reactive_power_level').set_value(gsc_reactive_power / gsc_reactive_power_max)
+    except ZeroDivisionError:
+        builder.get_object('gsc_reactive_power_level').set_value(0.0)
+    gsc_vgrid_imbalance = struct.unpack("!i", bytes.fromhex(s[2:4]))[0] / 1000
+    builder.get_object('gsc_vgrid_imbalance').set_text('{:.1f}'.format(100 * gsc_vgrid_imbalance))
+    gsc_i_line = struct.unpack("!i", bytes.fromhex(s[4:6]))[0] / 10
+    builder.get_object('gsc_i_line').set_text('{:.1f}'.format(gsc_i_line))
+    try:
+        builder.get_object('gsc_i_line_level').set_value((gsc_i_line * math.sqrt(2)) / gsc_i_max_p)
+    except ZeroDivisionError:
+        builder.get_object('gsc_i_line_level').set_value(0.0)
+    gsc_fgrid = struct.unpack("!i", bytes.fromhex(s[6:8]))[0] / 10
+    builder.get_object('gsc_fgrid').set_text('{:.1f}'.format(gsc_fgrid))
+    builder.get_object('gsc_fgrid_level').set_value((gsc_fgrid - 55.0) / (65.0 - 55.0))
+
+
+def can_meas_1_2(s):
+    """Measures group 1 pt 2."""
+    global builder
+    if not len(s) == 12:
+        print(f'ERROR: can_meas_1_2: s={s} has no 12 chars')
+    builder_set(s[0:2], 'vga_rms', 0.1)
+    builder_set(s[2:6], 'vgb_rms', 0.1)
+    builder_set(s[6:8], 'vgc_rms', 0.1)
+
+
+def can_adc_1(s):
+    """ADC calibration measures group 1."""
+    global builder
+    if not len(s) == 16:
+        print(f'ERROR: can_adc_1: s={s} has no 16 chars')
+    builder_set(s[0:2], "gsc_adc_a1")
+    builder_set(s[2:4], "gsc_adc_a2")
+    builder_set(s[4:6], "gsc_adc_a3")
+    builder_set(s[6:8], "gsc_adc_a4")
+
+
+def can_adc_2(s):
     """Set ADC group 2: ADC_B14, ADC_B2 .. 4."""
-    builder.get_object('gsc_adc_b14').set_text('{}'.format(lst[0] << 8 + lst[1]))
-    builder.get_object('gsc_adc_b2').set_text('{}'.format(lst[2] << 8 + lst[3]))
-    builder.get_object('gsc_adc_b3').set_text('{}'.format(lst[4] << 8 + lst[5]))
-    builder.get_object('gsc_adc_b4').set_text('{}'.format(lst[6] << 8 + lst[7]))
+    builder_set(s[0:2], 'gsc_adc_b14')
+    builder_set(s[2:4], 'gsc_adc_b2')
+    builder_set(s[4:6], 'gsc_adc_b3')
+    builder_set(s[6:8], 'gsc_adc_b4')
 
 
 def set_gsc_adc_3(lst):
     """Set ADC group 2: ADC_C14, ADC_C2 .. 4."""
-    builder.get_object('gsc_adc_c14').set_text('{}'.format(lst[0] << 8 + lst[1]))
-    builder.get_object('gsc_adc_c2').set_text('{}'.format(lst[2] << 8 + lst[3]))
-    builder.get_object('gsc_adc_c3').set_text('{}'.format(lst[4] << 8 + lst[5]))
-    builder.get_object('gsc_adc_c4').set_text('{}'.format(lst[6] << 8 + lst[7]))
+    builder_set_int(s[0:2], 'gsc_adc_c14')
+    builder_set_int(s[2:4], 'gsc_adc_c2')
+    builder_set_int(s[4:6], 'gsc_adc_c3')
+    builder_set_int(s[6:8], 'gsc_adc_c4')
 
 
-def to_hex(c):
-    """
-    Return a hex value from 0 to F, according to char c. If error, return 0 in
-    the same way.
-    """
-    if '0' <= c <= '9':
-        return ord(c) - ord('0')
-    if 'a' <= c < 'f':
-        return ord(c) - ord('a') + 10
-    if 'A' <= c <= 'F':
-        return ord(c) - ord('A') + 10
-    return 0
-
-
-def str_to_byte_array(s):
-    """
-    Convert a string s, in hexadecimal ascii (2 chars is one byte) to a byte
-    array.
-    """
-    a = []
-    for i, c in zip(range(len(s)), s):
-        if (i % 2 == 0):
-            a.append(to_hex(c) << 4)
-        else:
-            a[int(i / 2)] += to_hex(c)
-    return a
-
-
-def vbus_n_status(s):
-    """
-    Extract Vbus, Pgrid, Qgrid and staus from s.
-    """
-    global gsc_vbus
-    a = str_to_byte_array(s)
-    gsc_vbus = ((a[0] << 16) + a[1]) / 10
-    # TODO: parse other
-
-
-can_ids = [[0x040101, "Vbus P_grid Q_grid status"]]
+can_ids = [[0x0040101, can_vbus_n_status, "Vbus P_grid V_grid status"],
+           [0xc800103, can_hs_temp, "Heatsink temp"],
+           [0xd00010c, can_params_1_1, "Params gr 1 pt 1"],
+           [0xd00010d, can_params_1_2, "Params gr 1 pt 2"]]
 
 
 def get_twai_data(lst):
     """
     Parse data of each CAN id.
     """
-    print(lst)
+    can_id = struct.unpack("!I", bytes.fromhex(lst[1]))[0]
+    for row in can_ids:
+        if can_id == row[0]:
+            row[1](lst[2])
 
 
 callbacks = [['version-id', set_version],

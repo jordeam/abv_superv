@@ -548,7 +548,7 @@
                                     <property name="can-focus">False</property>
                                     <property name="left-padding">12</property>
                                     <child>
-                                      <!-- n-columns=2 n-rows=5 -->
+                                      <!-- n-columns=2 n-rows=6 -->
                                       <object class="GtkGrid">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
@@ -961,6 +961,88 @@
                                           <packing>
                                             <property name="left-attach">1</property>
                                             <property name="top-attach">4</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkBox">
+                                            <property name="visible">True</property>
+                                            <property name="can-focus">False</property>
+                                            <property name="orientation">vertical</property>
+                                            <property name="homogeneous">True</property>
+                                            <child>
+                                              <object class="GtkLevelBar" id="gsc_fgrid_level">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="value">0.80</property>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">0</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">False</property>
+                                                    <property name="label" translatable="yes">55.0</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">0</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel" id="gsc_fgrid">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">False</property>
+                                                    <property name="label" translatable="yes">Value</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">True</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">1</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">False</property>
+                                                    <property name="label" translatable="yes">65.0</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">2</property>
+                                                  </packing>
+                                                </child>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">1</property>
+                                              </packing>
+                                            </child>
+                                          </object>
+                                          <packing>
+                                            <property name="left-attach">1</property>
+                                            <property name="top-attach">5</property>
+                                          </packing>
+                                        </child>
+                                        <child>
+                                          <object class="GtkLabel">
+                                            <property name="visible">True</property>
+                                            <property name="can-focus">False</property>
+                                            <property name="label" translatable="yes">Frequência da rede (Hz): </property>
+                                          </object>
+                                          <packing>
+                                            <property name="left-attach">0</property>
+                                            <property name="top-attach">5</property>
                                           </packing>
                                         </child>
                                       </object>
@@ -2304,7 +2386,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="vga">
+                                                      <object class="GtkEntry" id="vga_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
@@ -2315,7 +2397,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="vgb">
+                                                      <object class="GtkEntry" id="vgb_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
@@ -2326,7 +2408,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="vgc">
+                                                      <object class="GtkEntry" id="vgc_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
@@ -2383,7 +2465,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="ila">
+                                                      <object class="GtkEntry" id="ila_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
@@ -2418,7 +2500,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="ilb">
+                                                      <object class="GtkEntry" id="ilb_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
@@ -2429,7 +2511,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="ilc">
+                                                      <object class="GtkEntry" id="ilc_rms">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>
