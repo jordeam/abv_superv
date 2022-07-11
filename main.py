@@ -173,6 +173,7 @@ class mySerial:
                 print('INFO: read_thread: serial is not open')
                 time.sleep(5)
 
+
 # Global parameters
 gsc_vbus_peak = 800.0
 gsc_vbus = 0.0
@@ -185,10 +186,10 @@ gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
 gsc_power_max = 275e3  # Maximum allowed active power to be injected
 gsc_reactive_power = 90e3  # Injected reactive power in VA
-gsc_reactive_power_max = 120e3 # Maximum reactive power
+gsc_reactive_power_max = 120e3  # Maximum reactive power
 gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
-gsc_vgrid_max = 480.0 # Maximum grid voltage
+gsc_vgrid_max = 480.0  # Maximum grid voltage
 gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
 gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
@@ -200,6 +201,7 @@ gsc_target_fp = 1.0  # target power factor
 gsc_vgrid_imbalance = 0.01  # voltage grid imbalance
 gsc_fgrid = 59.5  # grid frequency
 gsc_fgrid_nom = 60.0  # grid nominal frequency
+
 
 def rad2rpm(rad):
     """Convert radian value to degree value."""
@@ -257,10 +259,10 @@ class Handler:
         global gsc_adc_raw
         if wdg.get_active():
             print('ADC raw active')
-            myser.write(f'send e00010b 0001')
+            myser.write('send e00010b 0001')
         else:
             print('ADC raw inactive')
-            myser.write(f'send e00010b 0002')
+            myser.write('send e00010b 0002')
 
     #
     # MSC
@@ -360,6 +362,7 @@ def can_hs_temp(s):
         print(f'ERROR: can_hs_temp: s={s} has no 8 chars')
     gsc_hs_temp = struct.unpack("!f", bytes.fromhex(s))[0]
     builder.get_object('gsc_hs_temp').set_text('{:.1f}'.format(gsc_hs_temp))
+
 
 def can_params_1_1(s):
     """
@@ -466,6 +469,7 @@ def can_meas_2_3(s):
     builder_set(s[8:12], 'ilc_rms', 0.1)
     builder_set(s[12:16], 'ilc_avg', 0.1)
 
+
 def can_gsc_adc_1(s):
     """ADC calibration measures group 1."""
     global builder
@@ -555,6 +559,7 @@ window.show_all()
 r_th = Thread(target=myser.read_thread)
 r_th.daemon = True
 r_th.start()
+
 
 def write_thread():
     """Write serial commands. TODO: the commands."""
