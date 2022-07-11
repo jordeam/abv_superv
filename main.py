@@ -305,11 +305,12 @@ def str_to_size(s, size):
         s = '0' + s
     return s
 
+
 def builder_set(s, label, k=1, n=0, mult=''):
     """Set a GTK label with value from s, no scale."""
     global builder
     val = struct.unpack("!i", bytes.fromhex(str_to_size(s, 8)))[0] * k
-    s=f'{{:.{n}f}}{mult}'
+    s = f'{{:.{n}f}}{mult}'
     builder.get_object(label).set_text(s.format(val))
     return val
 
@@ -379,7 +380,7 @@ def can_params_1_1(s):
     builder.get_object('gsc_vgrid_nom').set_text('{:.0f}'.format(gsc_vgrid_nom))
     gsc_i_max_p = struct.unpack("!i", bytes.fromhex(str_to_size(s[8:12], 8)))[0] / 10
     builder.get_object('gsc_i_max_p').set_text('{:.0f}'.format(gsc_i_max_p))
-    builder.get_object('gsc_i_max').set_text('{:.0f}'.format(gsc_i_max_p/math.sqrt(2)))
+    builder.get_object('gsc_i_max').set_text('{:.0f}'.format(gsc_i_max_p / math.sqrt(2)))
     gsc_droop_coef = struct.unpack("!i", bytes.fromhex(str_to_size(s[12:16], 8)))[0] / 1000
     builder.get_object('droop_val').set_text('{:.1f}'.format(gsc_droop_coef * 100))
 
@@ -532,6 +533,7 @@ def get_twai_data(lst):
                 row[1](lst[2].strip())
             else:
                 print(f'WARNING: can id={hex(can_id)} has no data')
+
 
 callbacks = [['version-id', set_version],
              ['twai', get_twai_data],
