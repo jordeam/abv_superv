@@ -12,14 +12,12 @@ import math
 import time
 # import subprocess
 # import sys, getopt, os
-from pathlib import Path
-from threading import Thread, Lock
-import serial
+from threading import Thread
 import struct
 import ctypes
 from termcolor import colored
-
 import gi
+from canserial import CanSerial
 
 gi.require_version("Gtk", "3.0")
 
@@ -30,150 +28,6 @@ libc = ctypes.CDLL('libc.so.6')
 
 SPEED_MAX = 1200
 CURRENT_MAX = 50.0
-
-USB_max = 4  # Maximum number of serial USB devices to search for
-S_max = 4  # Maximum number of standard serial devices to search for
-
-
-class mySerial:
-    """
-    Class to group serial status vars.
-    """
-
-    def __init__(self, _builder, _callbacks):
-        self.mut = Lock()
-        self.mut_rd = Lock()
-        self.name = ''
-        self.ser = serial.Serial()
-        self.dev_list = []
-        self.builder = _builder
-        self.callbacks = _callbacks
-        self.debug = False
-
-    def create_list(self):
-        """Return a list of serial devices available."""
-        # clean serial_list
-        self.dev_list = []
-        for i in range(USB_max):
-            filename = '/dev/ttyUSB' + str(i)
-            if Path(filename).exists():
-                self.dev_list.append(filename)
-        for i in range(S_max):
-            filename = '/dev/ttyS' + str(i)
-            if Path(filename).exists():
-                self.dev_list.append(filename)
-
-    def write(self, s: str):
-        """Safe wrapper to serial write function."""
-        if self.debug:
-            print(s)
-        with self.mut:
-            if self.ser.isOpen():
-                self.ser.write(s.encode('ascii'))
-                self.ser.write(b'\r\n')
-            else:
-                print('ERROR: serial is not openned')
-
-    def read(self):
-        """Safe wrapper to serial read function."""
-        with self.mut_rd:
-            if self.ser.isOpen():
-                return self.ser.readline()
-            return ''
-
-    def open(self, name_):
-        """
-        Safe wrapper to serial open function, that verify other files.
-        TODO: need to decouple gtk objects from here.
-        """
-        print('serial_name={}'.format(name_))
-        if self.ser.isOpen():
-            self.ser.close()
-        try:
-            if self.debug:
-                print(f'INFO: trying to open serial {name_}')
-            self.ser = serial.Serial(name_, 115200, timeout=1)
-        except serial.SerialException:
-            self.ser.close()
-            print(f'ERRO: opening serial {name_}')
-        self.ser.flush()
-        self.ser.dtr = False
-        self.ser.rts = False
-        version = self.builder.get_object('version')
-        version.set_text('Version: ?????')
-        serial_status = self.builder.get_object('serial_status')
-        if self.ser.isOpen():
-            print('Serial {} openned successfuly'.format(name_))
-            serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
-            print('Serial device changed')
-            self.write('version-id')
-            self.name = name_
-            self.builder.get_object('serial_device').set_sensitive(False)
-            self.builder.get_object('connect').set_sensitive(False)
-            self.builder.get_object('disconnect').set_sensitive(True)
-        else:
-            serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
-
-    def reset(self):
-        """Reset ESP32 with Reset pin connected to DTR."""
-        if self.debug:
-            print('INFO: resetting serial')
-        self.ser.dtr = False
-        self.ser.rts = True
-        print('Serial RESET clicked')
-        # sleep here 50.0us
-        libc.usleep(50)
-        self.ser.dtr = True
-        self.ser.rts = True
-
-    def disconnect(self):
-        """Properly disconect serial flushing data."""
-        # global ser_name
-        if self.debug:
-            print('INFO: flushing serial')
-        with self.mut:
-            with self.mut_rd:
-                if self.ser.isOpen():
-                    self.ser.flushInput()
-                    self.ser.flushOutput()
-                    self.ser.cancel_write()
-                    self.ser.close()
-                    self.name = ''
-
-    def interpret(self):
-        """Interpret commands from serial device."""
-        while True:
-            ll = self.read().strip()
-            if len(ll) < 1:
-                break
-            try:
-                lst = ll.decode('utf-8').strip().split(' ')
-                f = filter(None, lst)
-                lst = list(f)
-                # if self.debug:
-                # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
-                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
-            except UnicodeDecodeError:
-                lst = []
-            if len(lst) > 0:
-                for pair in self.callbacks:
-                    if lst[0] == pair[0]:
-                        GLib.idle_add(pair[1], lst)
-
-    def read_thread(self):
-        """Read serial and calls interpret function."""
-        state = False
-        # l = b''
-        print('INFO: read_thread: waiting for serial')
-        while True:
-            if self.ser.isOpen():
-                self.interpret()
-            else:
-                # if it needs to access Gtk widgets:
-                # GLib.idle_add(serial_status_blink, state)
-                state = not state
-                print('INFO: read_thread: serial is not open')
-                time.sleep(5)
 
 
 # Global parameters
@@ -204,6 +58,7 @@ gsc_vgrid_imbalance = 0.01  # voltage grid imbalance
 gsc_fgrid = 59.5  # grid frequency
 gsc_fgrid_nom = 60.0  # grid nominal frequency
 
+msc_active: bool = False
 
 def rad2rpm(rad):
     """Convert radian value to degree value."""
@@ -241,7 +96,7 @@ class Handler:
 
     def on_get_version_clicked(self, _):
         """Show version."""
-        myser.write('version-id')
+        myser.write('version')
 
     def on_disconnect_clicked(self, _):
         """Act when disconnect button is clecked."""
@@ -254,7 +109,21 @@ class Handler:
     def on_connect_clicked(self, _):
         """Connect to serial when button is clicked."""
         combo = self.builder.get_object('serial_device')
-        myser.open(combo.get_active_text())
+        name = combo.get_active_text()
+        myser.open(name)
+        version = self.builder.get_object('version')
+        version.set_text('Version: ?????')
+        serial_status = self.builder.get_object('serial_status')
+        if myser.ser.isOpen():
+            print('Serial {} openned successfuly'.format(name))
+            serial_status.set_from_stock(Gtk.STOCK_APPLY, Gtk.IconSize.LARGE_TOOLBAR)
+            print('Serial device changed')
+
+            self.builder.get_object('serial_device').set_sensitive(False)
+            self.builder.get_object('connect').set_sensitive(False)
+            self.builder.get_object('disconnect').set_sensitive(True)
+        else:
+            serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
 
     def on_gsc_adc_raw_toggled(self, wdg):
         """Enable raw data CAN commando for GSC."""
@@ -278,14 +147,27 @@ class Handler:
             print('ERROR: invalid value for msc_mode')
 
     def on_msc_stop_clicked(self, _btn):
+        global msc_active
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Stopped')
-        myser.write('msc_mode 0  # stopped')
+        msc_active = False
+        myser.write('send E000205 0000')
 
-    def on_msc_motor_clicked(self, _btn):
+    def on_msc_start_clicked(self, _btn):
+        global msc_active
+        s_i_nom = builder.get_object('msc_i_nom').get_text()
+        if (len(s_i_nom) < 2):
+            print('ERR: msc_i_nom is not set')
+            return
         entry_mode = self.builder.get_object('msc_mode')
-        entry_mode.set_text('Motor')
-        myser.write('msc_mode 1  # motor')
+        entry_mode.set_text('Running')
+        x = builder.get_object('adj_op_current').get_value()
+        i_ref = x * float(s_i_nom) * 0.01
+        msc_active = True
+        cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
+        print(f'start_clicked: cmd={cmd}')
+        myser.write(cmd)
+
 
     def on_msc_generator_clicked(self, _btn):
         entry_mode = self.builder.get_object('msc_mode')
@@ -295,27 +177,48 @@ class Handler:
     def on_msc_gen_auto_toggled(self, wdg):
         myser.write('msc_gen_auto {}'.format('1' if wdg.get_active() else '0'))
 
+    def on_adj_op_current_value_changed(self, wdg):
+        x = wdg.get_value()
+        print(f'vc msc_i_ref={x}')
+        if msc_active:
+            s_i_nom = builder.get_object('msc_i_nom').get_text()
+            if (len(s_i_nom) < 2):
+                print('ERR: msc_i_nom is not set')
+                return
+            i_ref = x * float(s_i_nom) * 0.01
+            cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
+            myser.write(cmd)
+
 
 def set_version(ver):
     """Set ESP32 firmware version."""
     version = builder.get_object('version')
     version.set_text('Version: {}'.format(ver[1]))
+    # Taking a chance to get parameters:
+    print('INFO: sending parameters request')
+    myser.write('send e000206 0001')
 
 
-def str_to_size(s, size):
+def str_to_size(s: str, size: int) -> str:
     """Fill the beginning of string with zeroes."""
     while len(s) < size:
         s = '0' + s
     return s
 
 
-def builder_set(s, label, k=1, n=0, mult=''):
-    """Set a GTK label with value from s, no scale."""
+def CANDataToString(s: str, k=1.0, n=0, unit=''):
+    """Return a string representing the value from CAN data represented by string s, multiplied by k with n number of decimal digits, appended by unit."""
     # global builder
     val = struct.unpack("!i", bytes.fromhex(str_to_size(s, 8)))[0] * k
-    s = f'{{:.{n}f}}{mult}'
-    builder.get_object(label).set_text(s.format(val))
-    return val
+    s = f'{{:.{n}f}}{unit}'
+    return s.format(val)
+
+
+def builder_set(s: str, label: str, k=1.0, n=0, unit='') -> None:
+    """Set a GTK label with value from s, no scale."""
+    # global builder
+    s = CANDataToString(s, k, n, unit)
+    builder.get_object(label).set_text(s)
 
 
 def can_vbus_n_status(s):
@@ -513,17 +416,47 @@ def can_gsc_adc_3(s):
     builder_set(s[12:16], 'gsc_adc_c4')
 
 
-can_ids = [[0x0040101, can_vbus_n_status, "Vbus P_grid V_grid status"],
-           [0xc800103, can_hs_temp, "Heatsink temp"],
-           [0xd00010c, can_params_1_1, "Params group 1 pt 1"],
-           [0xd00010d, can_params_1_2, "Params group 2 pt 1"],
-           [0xd00010e, can_meas_1_1, "Measures 1.1"],
-           [0xd00010f, can_meas_2_1, "Measures 2.1"],
-           [0xd000110, can_meas_2_2, "Measures 2.2"],
-           [0xd000111, can_meas_2_3, "Measures 2.3"],
-           [0xc400112, can_gsc_adc_1, "ADC A raw values"],
-           [0xc400113, can_gsc_adc_2, "ADC B raw values"],
-           [0xc400114, can_gsc_adc_3, "ADC C raw values"]]
+def can_msc_vbus_etal(s: str) -> None:
+    "Receive MSC Vbus, stator current, electric machine frequency Hz and status (which is not well defined)."
+    if not len(s) == 16:
+        print(f'ERROR: can_msc_vbus_etal: s={s} has no 16 chars')
+        return
+    builder_set(s[0:4], 'im_vbus_lvl')
+
+
+def can_msc_hs_temp(s: str) -> None:
+    pass
+
+
+def msc_params_1(s: str) -> None:
+    "Receive PMSM i_nom, v_nom, fs_min ans i_max."
+    if not len(s) == 16:
+        print(f'ERROR: msc_params_1: s={s} has no 16 chars')
+        return
+    i_nom = CANDataToString(s[0:4], 0.1, 1)
+    builder.get_object("msc_i_nom").set_text(i_nom)
+    v_nom = CANDataToString(s[4:8], 0.1, 1)
+    builder.get_object("msc_v_nom").set_text(v_nom)
+
+
+can_ids = [
+    # From GSC:
+    [0x0040101, can_vbus_n_status, "Vbus P_grid V_grid status"],
+    [0xc800103, can_hs_temp, "Heatsink temp"],
+    [0xd00010c, can_params_1_1, "Params group 1 pt 1"],
+    [0xd00010d, can_params_1_2, "Params group 2 pt 1"],
+    [0xd00010e, can_meas_1_1, "Measures 1.1"],
+    [0xd00010f, can_meas_2_1, "Measures 2.1"],
+    [0xd000110, can_meas_2_2, "Measures 2.2"],
+    [0xd000111, can_meas_2_3, "Measures 2.3"],
+    [0xc400112, can_gsc_adc_1, "ADC A raw values"],
+    [0xc400113, can_gsc_adc_2, "ADC B raw values"],
+    [0xc400114, can_gsc_adc_3, "ADC C raw values"],
+    # From MSC:
+    [0xc100201, can_msc_vbus_etal, "Vbus LineCurrent Freq Status"],
+    [0xc800203, can_msc_hs_temp, "MSC Heatsink temperature °C"],
+    [0xd000207, msc_params_1, "MSC parameters group 1"]
+]
 
 
 def get_twai_data(lst) -> None:
@@ -546,15 +479,22 @@ def get_twai_data(lst) -> None:
             #     print(f'WARNING: can id={hex(can_id)} has no data')
 
 
-callbacks = [['version-id', set_version],
+callbacks = [['version', set_version],
              ['twai', get_twai_data],
              ]
+
+
+def interpret(lst: list[str]) -> None:
+    """Interpret commands from serial device."""
+    for pair in callbacks:
+        if lst[0] == pair[0]:
+            GLib.idle_add(pair[1], lst)
 
 
 builder = Gtk.Builder()
 builder.add_from_file("superv.glade")
 
-myser = mySerial(builder, callbacks)
+myser = CanSerial(interpret)
 myser.debug = False  # remove this to operate
 myser.create_list()
 serial_combo = builder.get_object('serial_device')
@@ -566,7 +506,6 @@ serial_combo.set_active(False)
 builder.connect_signals(Handler(builder))
 window = builder.get_object('window1')
 window.show_all()
-
 
 # Threads go here
 r_th = Thread(target=myser.read_thread)
@@ -580,14 +519,8 @@ def write_thread():
         if not myser.ser.isOpen():
             time.sleep(2)
             continue
-        myser.write('twai')
-        time.sleep(1)
-        myser.write('send e00010b 0100')
-        time.sleep(1)
-        myser.write('send e00010b 0200')
-        time.sleep(1)
-        myser.write('send e00010b 0300')
-        time.sleep(1)
+        # myser.write('twai')
+        time.sleep(5)  # TODO: review this time
 
 
 w_th = Thread(target=write_thread)
