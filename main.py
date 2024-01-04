@@ -16,12 +16,17 @@ from pathlib import Path
 from threading import Thread, Lock
 import serial
 import struct
+import ctypes
+from termcolor import colored
 
 import gi
 
 gi.require_version("Gtk", "3.0")
 
 from gi.repository import Gtk, GLib
+
+# Used for usleep
+libc = ctypes.CDLL('libc.so.6')
 
 SPEED_MAX = 1200
 CURRENT_MAX = 50.0
@@ -34,23 +39,15 @@ class mySerial:
     """
     Class to group serial status vars.
     """
-    name: str
-    ser: serial.Serial
-    dev_list: list
-    mut: Lock
-    mut_rd: Lock
-    builder: Gtk.Builder
-    callbacks: list
-    debug: bool
 
-    def __init__(self, builder, callbacks):
+    def __init__(self, _builder, _callbacks):
         self.mut = Lock()
         self.mut_rd = Lock()
         self.name = ''
         self.ser = serial.Serial()
         self.dev_list = []
-        self.builder = builder
-        self.callbacks = callbacks
+        self.builder = _builder
+        self.callbacks = _callbacks
         self.debug = False
 
     def create_list(self):
@@ -121,13 +118,17 @@ class mySerial:
         """Reset ESP32 with Reset pin connected to DTR."""
         if self.debug:
             print('INFO: resetting serial')
-        self.ser.dtr = True
-        print('Serial RESET clicked')
         self.ser.dtr = False
+        self.ser.rts = True
+        print('Serial RESET clicked')
+        # sleep here 50.0us
+        libc.usleep(50)
+        self.ser.dtr = True
+        self.ser.rts = True
 
     def disconnect(self):
         """Properly disconect serial flushing data."""
-        global ser_name
+        # global ser_name
         if self.debug:
             print('INFO: flushing serial')
         with self.mut:
@@ -149,8 +150,9 @@ class mySerial:
                 lst = ll.decode('utf-8').strip().split(' ')
                 f = filter(None, lst)
                 lst = list(f)
-                if self.debug:
-                    print(f"l = {ll.decode('utf-8')}, lst={lst}")
+                # if self.debug:
+                # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
+                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:
@@ -173,6 +175,7 @@ class mySerial:
                 print('INFO: read_thread: serial is not open')
                 time.sleep(5)
 
+
 # Global parameters
 gsc_vbus_peak = 800.0
 gsc_vbus = 0.0
@@ -185,10 +188,10 @@ gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
 gsc_power_max = 275e3  # Maximum allowed active power to be injected
 gsc_reactive_power = 90e3  # Injected reactive power in VA
-gsc_reactive_power_max = 120e3 # Maximum reactive power
+gsc_reactive_power_max = 120e3  # Maximum reactive power
 gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
-gsc_vgrid_max = 480.0 # Maximum grid voltage
+gsc_vgrid_max = 480.0  # Maximum grid voltage
 gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
 gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
@@ -201,6 +204,7 @@ gsc_vgrid_imbalance = 0.01  # voltage grid imbalance
 gsc_fgrid = 59.5  # grid frequency
 gsc_fgrid_nom = 60.0  # grid nominal frequency
 
+
 def rad2rpm(rad):
     """Convert radian value to degree value."""
     return 30 * rad / math.pi
@@ -210,8 +214,8 @@ class Handler:
     """Main handler for GTK interface."""
     builder: Gtk.Builder
 
-    def __init__(self, builder):
-        self.builder = builder
+    def __init__(self, _builder):
+        self.builder = _builder
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Stopped')
 
@@ -254,13 +258,13 @@ class Handler:
 
     def on_gsc_adc_raw_toggled(self, wdg):
         """Enable raw data CAN commando for GSC."""
-        global gsc_adc_raw
+        # global gsc_adc_raw
         if wdg.get_active():
             print('ADC raw active')
-            myser.write(f'send e00010b 0001')
+            myser.write('send e00010b 0001')
         else:
             print('ADC raw inactive')
-            myser.write(f'send e00010b 0002')
+            myser.write('send e00010b 0002')
 
     #
     # MSC
@@ -273,17 +277,17 @@ class Handler:
         else:
             print('ERROR: invalid value for msc_mode')
 
-    def on_msc_stop_clicked(self, btn):
+    def on_msc_stop_clicked(self, _btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Stopped')
         myser.write('msc_mode 0  # stopped')
 
-    def on_msc_motor_clicked(self, btn):
+    def on_msc_motor_clicked(self, _btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Motor')
         myser.write('msc_mode 1  # motor')
 
-    def on_msc_generator_clicked(self, btn):
+    def on_msc_generator_clicked(self, _btn):
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Generator')
         myser.write('msc_mode 2  # generator')
@@ -299,15 +303,17 @@ def set_version(ver):
 
 
 def str_to_size(s, size):
+    """Fill the beginning of string with zeroes."""
     while len(s) < size:
         s = '0' + s
     return s
 
+
 def builder_set(s, label, k=1, n=0, mult=''):
     """Set a GTK label with value from s, no scale."""
-    global builder
+    # global builder
     val = struct.unpack("!i", bytes.fromhex(str_to_size(s, 8)))[0] * k
-    s=f'{{:.{n}f}}{mult}'
+    s = f'{{:.{n}f}}{mult}'
     builder.get_object(label).set_text(s.format(val))
     return val
 
@@ -316,7 +322,8 @@ def can_vbus_n_status(s):
     """
     Extract Vbus, Pgrid, Vgrid and status from s.
     """
-    global builder, gsc_vbus, gsc_power, gsc_vgrid
+    # global builder
+    global gsc_vbus, gsc_power, gsc_vgrid, gsc_status
     if not len(s) == 16:
         print(f'ERROR: can_vbus_n_status: s={s} has no 16 chars')
     gsc_vbus = struct.unpack("!i", bytes.fromhex(str_to_size(s[0:4], 8)))[0] / 10
@@ -354,19 +361,22 @@ def can_hs_temp(s):
     """
     Heatsink temperature.
     """
-    global builder, gsc_hs_temp
+    # global builder
+    global gsc_hs_temp
     # print(f'can_hs_temp: setting temp {s}')
     if not len(s) == 8:
         print(f'ERROR: can_hs_temp: s={s} has no 8 chars')
     gsc_hs_temp = struct.unpack("!f", bytes.fromhex(s))[0]
     builder.get_object('gsc_hs_temp').set_text('{:.1f}'.format(gsc_hs_temp))
 
+
 def can_params_1_1(s):
     """
     Parameters group 1 pt 1.
     target_fp, vgrid_nom, max_peak_current, droop_coef
     """
-    global builder, gsc_target_fp, gsc_vgrid_nom, gsc_i_max_p, gsc_droop_coef
+    # global builder
+    global gsc_target_fp, gsc_vgrid_nom, gsc_i_max_p, gsc_droop_coef
     if not len(s) == 16:
         print(f'ERROR: can_params_1_1: s={s} has no 16 chars')
     # print(f'target_fp = {s[0:4]}')
@@ -376,7 +386,7 @@ def can_params_1_1(s):
     builder.get_object('gsc_vgrid_nom').set_text('{:.0f}'.format(gsc_vgrid_nom))
     gsc_i_max_p = struct.unpack("!i", bytes.fromhex(str_to_size(s[8:12], 8)))[0] / 10
     builder.get_object('gsc_i_max_p').set_text('{:.0f}'.format(gsc_i_max_p))
-    builder.get_object('gsc_i_max').set_text('{:.0f}'.format(gsc_i_max_p/math.sqrt(2)))
+    builder.get_object('gsc_i_max').set_text('{:.0f}'.format(gsc_i_max_p / math.sqrt(2)))
     gsc_droop_coef = struct.unpack("!i", bytes.fromhex(str_to_size(s[12:16], 8)))[0] / 1000
     builder.get_object('droop_val').set_text('{:.1f}'.format(gsc_droop_coef * 100))
 
@@ -386,7 +396,8 @@ def can_params_1_2(s):
     Parameters group 1 pt 2.
     power_nom, vbus_peak
     """
-    global builder, gsc_power_nom, gsc_vbus_peak
+    # global builder
+    global gsc_power_nom, gsc_vbus_peak
     if not len(s) == 8:
         print(f'ERROR: can_params_1_2: s={s} has no 8 chars')
     gsc_power_nom = builder_set(s[0:4], 'gsc_power_nom', 10)
@@ -398,7 +409,8 @@ def can_meas_1_1(s):
     Measures group 1 pt 1.
     reactive_power, voltage_imbalance, injected_current, grid_freq
     """
-    global builder, gsc_reactive_power, gsc_reactive_power_max, gsc_vgrid_imbalance, gsc_i_line, gsc_i_max_p, gsc_fgrid
+    # global builder
+    global gsc_reactive_power, gsc_reactive_power_max, gsc_vgrid_imbalance, gsc_i_line, gsc_fgrid
     if not len(s) == 16:
         print(f'ERROR: can_meas_1_1: s={s} has no 16 chars')
     gsc_reactive_power = struct.unpack("!i", bytes.fromhex(str_to_size(s[0:4], 8)))[0] * 10
@@ -427,7 +439,7 @@ def can_meas_2_1(s):
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
-    global builder
+    # global builder
     if not len(s) == 16:
         print(f'ERROR: can_meas_2_1: s={s} has no 16 chars')
         return
@@ -442,7 +454,7 @@ def can_meas_2_2(s):
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
-    global builder
+    # global builder
     if not len(s) == 16:
         print(f'ERROR: can_meas_2_2: s={s} has no 16 chars')
         return
@@ -457,7 +469,7 @@ def can_meas_2_3(s):
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
-    global builder
+    # global builder
     if not len(s) == 16:
         print(f'ERROR: can_meas_2_3: s={s} has no 16 chars')
         return
@@ -466,9 +478,10 @@ def can_meas_2_3(s):
     builder_set(s[8:12], 'ilc_rms', 0.1)
     builder_set(s[12:16], 'ilc_avg', 0.1)
 
+
 def can_gsc_adc_1(s):
     """ADC calibration measures group 1."""
-    global builder
+    # global builder
     if not len(s) == 16:
         print(f'ERROR: can_gsc_adc_1: s={s} has no 16 chars')
         return
@@ -513,10 +526,13 @@ can_ids = [[0x0040101, can_vbus_n_status, "Vbus P_grid V_grid status"],
            [0xc400114, can_gsc_adc_3, "ADC C raw values"]]
 
 
-def get_twai_data(lst):
+def get_twai_data(lst) -> None:
     """
     Parse data of each CAN id.
     """
+    if len(lst) < 2:
+        print('WARN: get_twai_data has lst with less than 2 elements.')
+        return
     s = lst[1]
     while len(s) < 8:
         s = '0' + s
@@ -526,8 +542,9 @@ def get_twai_data(lst):
         if can_id == row[0]:
             if len(lst) == 3:
                 row[1](lst[2].strip())
-            else:
-                print(f'WARNING: can id={hex(can_id)} has no data')
+            # else:
+            #     print(f'WARNING: can id={hex(can_id)} has no data')
+
 
 callbacks = [['version-id', set_version],
              ['twai', get_twai_data],
@@ -555,6 +572,7 @@ window.show_all()
 r_th = Thread(target=myser.read_thread)
 r_th.daemon = True
 r_th.start()
+
 
 def write_thread():
     """Write serial commands. TODO: the commands."""
