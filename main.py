@@ -58,7 +58,17 @@ gsc_vgrid_imbalance = 0.01  # voltage grid imbalance
 gsc_fgrid = 59.5  # grid frequency
 gsc_fgrid_nom = 60.0  # grid nominal frequency
 
+#
+# MSC
+#
 msc_active: bool = False
+msc_i_max: float = 1.0
+
+#
+# Inverter
+#
+inv_da: int = 0
+inv_active: bool = False
 
 def rad2rpm(rad):
     """Convert radian value to degree value."""
@@ -138,14 +148,6 @@ class Handler:
     #
     # MSC
     #
-    def on_msc_mode_changed(self, combo):
-        """Machine operation mode: if stopped, motor or generator."""
-        i = combo.get_active()
-        if 0 <= i <= 3:
-            myser.write('msc_mode {}'.format(i))
-        else:
-            print('ERROR: invalid value for msc_mode')
-
     def on_msc_stop_clicked(self, _btn):
         global msc_active
         entry_mode = self.builder.get_object('msc_mode')
@@ -168,15 +170,6 @@ class Handler:
         print(f'start_clicked: cmd={cmd}')
         myser.write(cmd)
 
-
-    def on_msc_generator_clicked(self, _btn):
-        entry_mode = self.builder.get_object('msc_mode')
-        entry_mode.set_text('Generator')
-        myser.write('msc_mode 2  # generator')
-
-    def on_msc_gen_auto_toggled(self, wdg):
-        myser.write('msc_gen_auto {}'.format('1' if wdg.get_active() else '0'))
-
     def on_adj_op_current_value_changed(self, wdg):
         x = wdg.get_value()
         print(f'vc msc_i_ref={x}')
@@ -189,6 +182,20 @@ class Handler:
             cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
             myser.write(cmd)
 
+    def on_inv_active_toggled(self, wdg):
+        global inv_active
+        inv_active = wdg.get_active()
+        cmd = 'inv {} {:02}'.format('1' if inv_active else '0', inv_da)
+        print(f'INV: {cmd}')
+        myser.write(cmd)
+
+    def on_inv_da_value_changed(self, wdg):
+        global inv_da
+        inv_da = int(wdg.get_value())
+        if inv_active:
+            cmd = 'inv 1 {:02}'.format(inv_da)
+            print(f'INV: {cmd}')
+            myser.write(cmd)
 
 def set_version(ver):
     """Set ESP32 firmware version."""
@@ -416,20 +423,37 @@ def can_gsc_adc_3(s):
     builder_set(s[12:16], 'gsc_adc_c4')
 
 
-def can_msc_vbus_etal(s: str) -> None:
+def msc_vbus_etal(s: str) -> None:
     "Receive MSC Vbus, stator current, electric machine frequency Hz and status (which is not well defined)."
     if not len(s) == 16:
-        print(f'ERROR: can_msc_vbus_etal: s={s} has no 16 chars')
+        print(f'ERROR: msc_vbus_etal: s={s} has no 16 chars')
         return
-    builder_set(s[0:4], 'im_vbus_lvl')
+    # print('can_msc_vbus_etal:')
+    txt = CANDataToString(s[0:4], 0.1, 1)
+    builder.get_object('msc_vbus').set_text(txt)
+    builder.get_object('msc_vbus_lvl').set_value(float(txt))
+    # print(f'can_msc_vbus_etal: Vbus={txt}')
+    txt = CANDataToString(s[4:8], 0.1, 1)
+    builder.get_object('im_i_line').set_text(txt)
+    builder.get_object('im_i_line_lvl').set_value(float(txt))
+    txt = CANDataToString(s[8:12], 0.1, 1)
+    builder.get_object('im_fs').set_text(txt)
+    builder.get_object('im_fs_lvl').set_value(float(txt))
 
 
-def can_msc_hs_temp(s: str) -> None:
-    pass
+def msc_hs_temp(s: str) -> None:
+    if not len(s) == 4:
+        print(f'ERROR: msc_params_1: s={s} has no 4 chars')
+        return
+    txt = CANDataToString(s[0:4], 0.1, 1)
+    hs_temp = float(txt)
+    builder.get_object('msc_hs_temp').set_text(txt)
+    builder.get_object('msc_hs_temp_lvl').set_value(hs_temp)
 
 
 def msc_params_1(s: str) -> None:
     "Receive PMSM i_nom, v_nom, fs_min ans i_max."
+    global msc_i_max
     if not len(s) == 16:
         print(f'ERROR: msc_params_1: s={s} has no 16 chars')
         return
@@ -437,6 +461,13 @@ def msc_params_1(s: str) -> None:
     builder.get_object("msc_i_nom").set_text(i_nom)
     v_nom = CANDataToString(s[4:8], 0.1, 1)
     builder.get_object("msc_v_nom").set_text(v_nom)
+    f_min = CANDataToString(s[8:12], 0.1, 1)
+    builder.get_object('msc_f_min').set_text(f_min)
+    i_max = CANDataToString(s[12:16], 0.1, 1)
+    msc_i_max = float(i_max)
+    builder.get_object('msc_i_max').set_text(i_max)
+    builder.get_object('im_i_max').set_text(i_max)
+    builder.get_object('im_i_line_lvl').set_max_value(msc_i_max)
 
 
 can_ids = [
@@ -453,8 +484,8 @@ can_ids = [
     [0xc400113, can_gsc_adc_2, "ADC B raw values"],
     [0xc400114, can_gsc_adc_3, "ADC C raw values"],
     # From MSC:
-    [0xc100201, can_msc_vbus_etal, "Vbus LineCurrent Freq Status"],
-    [0xc800203, can_msc_hs_temp, "MSC Heatsink temperature °C"],
+    [0xc100201, msc_vbus_etal, "Vbus LineCurrent Freq Status"],
+    [0xc800203, msc_hs_temp, "MSC Heatsink temperature °C"],
     [0xd000207, msc_params_1, "MSC parameters group 1"]
 ]
 

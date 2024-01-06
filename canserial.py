@@ -3,6 +3,10 @@ from pathlib import Path
 import serial
 import time
 from termcolor import colored
+import ctypes
+
+#used for usleep
+libc = ctypes.CDLL('libc.so.6')
 
 
 USB_max = 4  # Maximum number of serial USB devices to search for
@@ -113,7 +117,7 @@ class CanSerial:
                 lst = list(f)
                 # if self.debug:
                 # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
-                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
+                # print(colored("LINE: ", "blue") + ll.decode('utf-8'))
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:

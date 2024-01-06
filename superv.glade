@@ -35,6 +35,12 @@
     <property name="page-increment">10</property>
     <signal name="value-changed" handler="on_adj_op_current_value_changed" swapped="no"/>
   </object>
+  <object class="GtkAdjustment" id="inv_da">
+    <property name="upper">99</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <signal name="value-changed" handler="on_inv_da_value_changed" swapped="no"/>
+  </object>
   <object class="GtkWindow" id="window1">
     <property name="can-focus">False</property>
     <property name="resizable">False</property>
@@ -244,6 +250,7 @@
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
+                        <property name="padding">2</property>
                         <property name="position">0</property>
                       </packing>
                     </child>
@@ -399,7 +406,7 @@
                                         <property name="can-focus">False</property>
                                         <property name="left-padding">12</property>
                                         <child>
-                                          <!-- n-columns=2 n-rows=2 -->
+                                          <!-- n-columns=2 n-rows=4 -->
                                           <object class="GtkGrid">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
@@ -423,7 +430,7 @@
                                               </object>
                                               <packing>
                                                 <property name="left-attach">0</property>
-                                                <property name="top-attach">1</property>
+                                                <property name="top-attach">2</property>
                                               </packing>
                                             </child>
                                             <child>
@@ -439,6 +446,50 @@
                                             </child>
                                             <child>
                                               <object class="GtkEntry" id="msc_v_nom">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="editable">False</property>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">1</property>
+                                                <property name="top-attach">2</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkLabel">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="label" translatable="yes">Frequencia mínima (Hz)</property>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">3</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkEntry" id="msc_f_min">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">True</property>
+                                                <property name="editable">False</property>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">1</property>
+                                                <property name="top-attach">3</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkLabel">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="label" translatable="yes">Corrente máxima (A)</property>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">1</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkEntry" id="msc_i_max">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">True</property>
                                                 <property name="editable">False</property>
@@ -482,13 +533,13 @@
                                             <property name="can-focus">False</property>
                                             <property name="orientation">vertical</property>
                                             <child>
-                                              <object class="GtkCheckButton" id="msc_gen_auto">
-                                                <property name="label" translatable="yes">Passar para gerador automaticamente</property>
+                                              <object class="GtkCheckButton" id="inv_active">
+                                                <property name="label" translatable="yes">Habilitar Inversor</property>
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">True</property>
                                                 <property name="receives-default">False</property>
                                                 <property name="draw-indicator">True</property>
-                                                <signal name="toggled" handler="on_msc_gen_auto_toggled" swapped="no"/>
+                                                <signal name="toggled" handler="on_inv_active_toggled" swapped="no"/>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
@@ -497,10 +548,40 @@
                                               </packing>
                                             </child>
                                             <child>
-                                              <placeholder/>
-                                            </child>
-                                            <child>
-                                              <placeholder/>
+                                              <!-- n-columns=2 n-rows=1 -->
+                                              <object class="GtkGrid">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="row-homogeneous">True</property>
+                                                <property name="column-homogeneous">True</property>
+                                                <child>
+                                                  <object class="GtkLabel">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">False</property>
+                                                    <property name="label" translatable="yes">Saída do DA (%)</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="left-attach">0</property>
+                                                    <property name="top-attach">0</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkSpinButton">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="adjustment">inv_da</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="left-attach">1</property>
+                                                    <property name="top-attach">0</property>
+                                                  </packing>
+                                                </child>
+                                              </object>
+                                              <packing>
+                                                <property name="expand">False</property>
+                                                <property name="fill">True</property>
+                                                <property name="position">1</property>
+                                              </packing>
                                             </child>
                                           </object>
                                         </child>
@@ -510,7 +591,7 @@
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">Entradas</property>
+                                        <property name="label" translatable="yes">Controle do motor</property>
                                       </object>
                                     </child>
                                   </object>
@@ -531,7 +612,7 @@
                                         <property name="can-focus">False</property>
                                         <property name="left-padding">12</property>
                                         <child>
-                                          <!-- n-columns=2 n-rows=6 -->
+                                          <!-- n-columns=2 n-rows=5 -->
                                           <object class="GtkGrid">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
@@ -640,6 +721,7 @@
                                                     <property name="visible">True</property>
                                                     <property name="can-focus">False</property>
                                                     <property name="value">0.29999999999999999</property>
+                                                    <property name="max-value">70</property>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>
@@ -704,93 +786,11 @@
                                               <object class="GtkLabel">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
-                                                <property name="label" translatable="yes">Tensão aplicada (V): </property>
-                                              </object>
-                                              <packing>
-                                                <property name="left-attach">0</property>
-                                                <property name="top-attach">2</property>
-                                              </packing>
-                                            </child>
-                                            <child>
-                                              <object class="GtkBox">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <property name="orientation">vertical</property>
-                                                <property name="homogeneous">True</property>
-                                                <child>
-                                                  <object class="GtkLevelBar" id="im_v_lvl">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="value">0.80</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">0</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkBox">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <child>
-                                                      <object class="GtkLabel">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="label" translatable="yes">0.0</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">0</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
-                                                      <object class="GtkLabel" id="im_v">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="label" translatable="yes">Value</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">True</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">1</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
-                                                      <object class="GtkLabel" id="im_v_max">
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">False</property>
-                                                        <property name="label" translatable="yes">Max</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">2</property>
-                                                      </packing>
-                                                    </child>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="expand">False</property>
-                                                    <property name="fill">True</property>
-                                                    <property name="position">1</property>
-                                                  </packing>
-                                                </child>
-                                              </object>
-                                              <packing>
-                                                <property name="left-attach">1</property>
-                                                <property name="top-attach">2</property>
-                                              </packing>
-                                            </child>
-                                            <child>
-                                              <object class="GtkLabel">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
                                                 <property name="label" translatable="yes">Tensão do barramento (V): </property>
                                               </object>
                                               <packing>
                                                 <property name="left-attach">0</property>
-                                                <property name="top-attach">3</property>
+                                                <property name="top-attach">2</property>
                                               </packing>
                                             </child>
                                             <child>
@@ -800,10 +800,11 @@
                                                 <property name="orientation">vertical</property>
                                                 <property name="homogeneous">True</property>
                                                 <child>
-                                                  <object class="GtkLevelBar" id="im_vbus_lvl">
+                                                  <object class="GtkLevelBar" id="msc_vbus_lvl">
                                                     <property name="visible">True</property>
                                                     <property name="can-focus">False</property>
                                                     <property name="value">0.80</property>
+                                                    <property name="max-value">800</property>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>
@@ -828,7 +829,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkLabel" id="im_vbus">
+                                                      <object class="GtkLabel" id="msc_vbus">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">False</property>
                                                         <property name="label" translatable="yes">Value</property>
@@ -861,7 +862,7 @@
                                               </object>
                                               <packing>
                                                 <property name="left-attach">1</property>
-                                                <property name="top-attach">3</property>
+                                                <property name="top-attach">2</property>
                                               </packing>
                                             </child>
                                             <child>
@@ -872,7 +873,7 @@
                                               </object>
                                               <packing>
                                                 <property name="left-attach">0</property>
-                                                <property name="top-attach">4</property>
+                                                <property name="top-attach">3</property>
                                               </packing>
                                             </child>
                                             <child>
@@ -882,10 +883,11 @@
                                                 <property name="orientation">vertical</property>
                                                 <property name="homogeneous">True</property>
                                                 <child>
-                                                  <object class="GtkLevelBar" id="im_hs_temp_lvl">
+                                                  <object class="GtkLevelBar" id="msc_hs_temp_lvl">
                                                     <property name="visible">True</property>
                                                     <property name="can-focus">False</property>
                                                     <property name="value">0.80</property>
+                                                    <property name="max-value">80</property>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>
@@ -910,7 +912,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkLabel" id="im_hs_temp">
+                                                      <object class="GtkLabel" id="msc_hs_temp">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">False</property>
                                                         <property name="label" translatable="yes">Value</property>
@@ -922,10 +924,10 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkLabel" id="im_vbus_max1">
+                                                      <object class="GtkLabel" id="msc_hs_tem_max">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">False</property>
-                                                        <property name="label" translatable="yes">60.0</property>
+                                                        <property name="label" translatable="yes">80.0</property>
                                                       </object>
                                                       <packing>
                                                         <property name="expand">False</property>
@@ -943,7 +945,7 @@
                                               </object>
                                               <packing>
                                                 <property name="left-attach">1</property>
-                                                <property name="top-attach">4</property>
+                                                <property name="top-attach">3</property>
                                               </packing>
                                             </child>
                                             <child>
