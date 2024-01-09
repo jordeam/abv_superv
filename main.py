@@ -188,6 +188,10 @@ class Handler:
         cmd = 'inv {} {:02}'.format('1' if inv_active else '0', inv_da)
         print(f'INV: {cmd}')
         myser.write(cmd)
+        # To TWAI:
+        cmd = 'send 1ffc0700 {:02}'.format((0x80 if inv_active else 0) + inv_da)
+        print(f'INV: {cmd}')
+        myser.write(cmd)
 
     def on_inv_da_value_changed(self, wdg):
         global inv_da
@@ -196,6 +200,7 @@ class Handler:
             cmd = 'inv 1 {:02}'.format(inv_da)
             print(f'INV: {cmd}')
             myser.write(cmd)
+
 
 def set_version(ver):
     """Set ESP32 firmware version."""
@@ -303,7 +308,7 @@ def can_params_1_1(s):
 
 def can_params_1_2(s):
     """
-    Parameters group 1 pt 2.
+    Parameters group 1 pt 2. TODO: fix it is a mess
     power_nom, vbus_peak
     """
     # global builder
