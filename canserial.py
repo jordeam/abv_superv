@@ -35,6 +35,10 @@ class CanSerial:
             filename = '/dev/ttyUSB' + str(i)
             if Path(filename).exists():
                 self.dev_list.append(filename)
+        for i in range(USB_max):
+            filename = '/dev/ttyACM' + str(i)
+            if Path(filename).exists():
+                self.dev_list.append(filename)
         for i in range(S_max):
             filename = '/dev/ttyS' + str(i)
             if Path(filename).exists():
@@ -117,7 +121,7 @@ class CanSerial:
                 lst = list(f)
                 # if self.debug:
                 # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
-                # print(colored("LINE: ", "blue") + ll.decode('utf-8'))
+                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:

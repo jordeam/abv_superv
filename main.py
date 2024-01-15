@@ -189,7 +189,7 @@ class Handler:
         print(f'INV: {cmd}')
         myser.write(cmd)
         # To TWAI:
-        cmd = 'send 1ffc0700 {:02}'.format((0x80 if inv_active else 0) + inv_da)
+        cmd = 'send 0ffc0701 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
         print(f'INV: {cmd}')
         myser.write(cmd)
 
@@ -198,6 +198,10 @@ class Handler:
         inv_da = int(wdg.get_value())
         if inv_active:
             cmd = 'inv 1 {:02}'.format(inv_da)
+            print(f'INV: {cmd}')
+            myser.write(cmd)
+            # To TWAI:
+            cmd = 'send 0ffc0701 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
             print(f'INV: {cmd}')
             myser.write(cmd)
 
