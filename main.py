@@ -189,7 +189,7 @@ class Handler:
         print(f'INV: {cmd}')
         myser.write(cmd)
         # To TWAI:
-        cmd = 'send 0ffc0701 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
+        cmd = 'send 1ffc0700 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
         print(f'INV: {cmd}')
         myser.write(cmd)
 
@@ -201,7 +201,7 @@ class Handler:
             print(f'INV: {cmd}')
             myser.write(cmd)
             # To TWAI:
-            cmd = 'send 0ffc0701 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
+            cmd = 'send 1ffc0700 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
             print(f'INV: {cmd}')
             myser.write(cmd)
 
@@ -212,7 +212,7 @@ def set_version(ver):
     version.set_text('Version: {}'.format(ver[1]))
     # Taking a chance to get parameters:
     print('INFO: sending parameters request')
-    myser.write('send e000206 0001')
+    myser.write('send e000208 0001')
 
 
 def str_to_size(s: str, size: int) -> str:
@@ -222,12 +222,24 @@ def str_to_size(s: str, size: int) -> str:
     return s
 
 
-def CANDataToString(s: str, k=1.0, n=0, unit=''):
+def CANDataToString(s: str, k=1.0, n=0, unit='') -> str:
     """Return a string representing the value from CAN data represented by string s, multiplied by k with n number of decimal digits, appended by unit."""
     # global builder
     val = struct.unpack("!i", bytes.fromhex(str_to_size(s, 8)))[0] * k
     s = f'{{:.{n}f}}{unit}'
     return s.format(val)
+
+
+def CANDataToInt16(s: str) -> int:
+    "Return signed integer from string s being data of CAN message."
+    val = struct.unpack("!h", bytes.fromhex(str_to_size(s, 4)))[0]
+    return val
+
+
+def CANDataToUInt16(s: str) -> int:
+    "Return signed integer from string s being data of CAN message."
+    val = struct.unpack("!H", bytes.fromhex(str_to_size(s, 4)))[0]
+    return val
 
 
 def builder_set(s: str, label: str, k=1.0, n=0, unit='') -> None:
@@ -237,18 +249,18 @@ def builder_set(s: str, label: str, k=1.0, n=0, unit='') -> None:
     builder.get_object(label).set_text(s)
 
 
-def can_vbus_n_status(s):
+def gsc_vbus_n_status(s):
     """
     Extract Vbus, Pgrid, Vgrid and status from s.
     """
     # global builder
     global gsc_vbus, gsc_power, gsc_vgrid, gsc_status
     if not len(s) == 16:
-        print(f'ERROR: can_vbus_n_status: s={s} has no 16 chars')
-    gsc_vbus = struct.unpack("!i", bytes.fromhex(str_to_size(s[0:4], 8)))[0] / 10
-    gsc_power = struct.unpack("!i", bytes.fromhex(str_to_size(s[4:8], 8)))[0] * 10
-    gsc_vgrid = struct.unpack("!i", bytes.fromhex(str_to_size(s[8:12], 8)))[0] / 10
-    gsc_status = struct.unpack("!i", bytes.fromhex(str_to_size(s[12:16], 8)))[0]
+        print(f'ERROR: gsc_vbus_n_status: s={s} has no 16 chars')
+    gsc_vbus = CANDataToInt16(s[0:4]) * 0.1
+    gsc_power = CANDataToInt16(s[4:8]) * 0.1
+    gsc_vgrid = CANDataToInt16(s[8:12]) * 0.1
+    gsc_status = CANDataToUInt16(s[12:16]) * 0.1
     # set interface
     builder.get_object('gsc_vbus')
     builder.get_object('gsc_vbus').set_text("{:.1f}".format(gsc_vbus))
@@ -276,20 +288,20 @@ def can_vbus_n_status(s):
     builder.get_object(label).set_active(True)
 
 
-def can_hs_temp(s):
+def set_gsc_hs_temp(s):
     """
     Heatsink temperature.
     """
     # global builder
     global gsc_hs_temp
-    # print(f'can_hs_temp: setting temp {s}')
-    if not len(s) == 8:
-        print(f'ERROR: can_hs_temp: s={s} has no 8 chars')
-    gsc_hs_temp = struct.unpack("!f", bytes.fromhex(s))[0]
+    # print(f'gsc_hs_temp: setting temp {s}')
+    if not len(s) == 4:
+        print(f'ERROR: gsc_hs_temp: s={s} has no 4 chars')
+    gsc_hs_temp = CANDataToInt16(s) * 0.1
     builder.get_object('gsc_hs_temp').set_text('{:.1f}'.format(gsc_hs_temp))
 
 
-def can_params_1_1(s):
+def gsc_params_1(s):
     """
     Parameters group 1 pt 1.
     target_fp, vgrid_nom, max_peak_current, droop_coef
@@ -297,9 +309,9 @@ def can_params_1_1(s):
     # global builder
     global gsc_target_fp, gsc_vgrid_nom, gsc_i_max_p, gsc_droop_coef
     if not len(s) == 16:
-        print(f'ERROR: can_params_1_1: s={s} has no 16 chars')
+        print(f'ERROR: gsc_params_1: s={s} has no 16 chars')
     # print(f'target_fp = {s[0:4]}')
-    gsc_target_fp = struct.unpack("!i", bytes.fromhex(str_to_size(s[0:4], 8)))[0] / 1000
+    gsc_target_fp = CANDataToInt16(s[0:4]) / 1000
     builder.get_object("gsc_fp_target").set_text("{:0.2f}".format(gsc_target_fp))
     gsc_vgrid_nom = struct.unpack("!i", bytes.fromhex(str_to_size(s[4:8], 8)))[0] / 10
     builder.get_object('gsc_vgrid_nom').set_text('{:.0f}'.format(gsc_vgrid_nom))
@@ -310,7 +322,7 @@ def can_params_1_1(s):
     builder.get_object('droop_val').set_text('{:.1f}'.format(gsc_droop_coef * 100))
 
 
-def can_params_1_2(s):
+def gsc_params_2(s):
     """
     Parameters group 1 pt 2. TODO: fix it is a mess
     power_nom, vbus_peak
@@ -318,12 +330,14 @@ def can_params_1_2(s):
     # global builder
     global gsc_power_nom, gsc_vbus_peak
     if not len(s) == 8:
-        print(f'ERROR: can_params_1_2: s={s} has no 8 chars')
-    gsc_power_nom = builder_set(s[0:4], 'gsc_power_nom', 10)
-    gsc_vbus_peak = builder_set(s[4:8], 'gsc_vbus_peak', 10)
+        print(f'ERROR: gsc_params_2: s={s} has no 8 chars')
+    builder_set(s[0:4], 'gsc_power_nom', 10)
+    gsc_power_nom = float(CANDataToString(s[0:4], 0.1))
+    builder_set(s[4:8], 'gsc_vbus_peak', 10)
+    gsc_vbus_peak = float(CANDataToString(s[4:8], 0.1))
 
 
-def can_meas_1_1(s):
+def gsc_meas_1(s):
     """
     Measures group 1 pt 1.
     reactive_power, voltage_imbalance, injected_current, grid_freq
@@ -331,7 +345,7 @@ def can_meas_1_1(s):
     # global builder
     global gsc_reactive_power, gsc_reactive_power_max, gsc_vgrid_imbalance, gsc_i_line, gsc_fgrid
     if not len(s) == 16:
-        print(f'ERROR: can_meas_1_1: s={s} has no 16 chars')
+        print(f'ERROR: gsc_meas_1: s={s} has no 16 chars')
     gsc_reactive_power = struct.unpack("!i", bytes.fromhex(str_to_size(s[0:4], 8)))[0] * 10
     builder.get_object('gsc_reactive_power').set_text('{:.1f}k'.format(gsc_reactive_power / 1e3))
     gsc_reactive_power_max = 0.329 * gsc_power_nom
@@ -353,14 +367,14 @@ def can_meas_1_1(s):
     builder.get_object('gsc_fgrid_level').set_value((gsc_fgrid - 55.0) / (65.0 - 55.0))
 
 
-def can_meas_2_1(s):
+def gsc_meas_2(s):
     """
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
     if not len(s) == 16:
-        print(f'ERROR: can_meas_2_1: s={s} has no 16 chars')
+        print(f'ERROR: gsc_meas_2: s={s} has no 16 chars')
         return
     builder_set(s[0:4], 'vga_rms', 0.1)
     builder_set(s[4:8], 'vgb_rms', 0.1)
@@ -368,14 +382,14 @@ def can_meas_2_1(s):
     builder_set(s[12:16], 'ila_avg', 0.1)
 
 
-def can_meas_2_2(s):
+def gsc_meas_3(s):
     """
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
     if not len(s) == 16:
-        print(f'ERROR: can_meas_2_2: s={s} has no 16 chars')
+        print(f'ERROR: gsc_meas_3: s={s} has no 16 chars')
         return
     builder_set(s[0:4], 'vga_avg', 0.1)
     builder_set(s[4:8], 'vgb_avg', 0.1)
@@ -383,14 +397,14 @@ def can_meas_2_2(s):
     builder_set(s[12:16], 'ilb_avg', 0.1)
 
 
-def can_meas_2_3(s):
+def gsc_meas_4(s):
     """
     Measures group 1 pt 2.
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
     if not len(s) == 16:
-        print(f'ERROR: can_meas_2_3: s={s} has no 16 chars')
+        print(f'ERROR: gsc_meas_4: s={s} has no 16 chars')
         return
     builder_set(s[0:4], 'ila_rms', 0.1)
     builder_set(s[4:8], 'ilb_rms', 0.1)
@@ -448,6 +462,12 @@ def msc_vbus_etal(s: str) -> None:
     txt = CANDataToString(s[8:12], 0.1, 1)
     builder.get_object('im_fs').set_text(txt)
     builder.get_object('im_fs_lvl').set_value(float(txt))
+    status = struct.unpack("!i", bytes.fromhex(str_to_size(s[12:16], 8)))[0]
+    builder.get_object('inv1_enabled').set_active(status & 1)
+    builder.get_object('msc_active').set_active(status & 2)
+    builder.get_object('pll_good').set_active(status & 4)
+    builder.get_object('encoder_is_calibrated').set_active(status & 8)
+    builder.get_object('encoder_is_valid').set_active(status & 0x10)
 
 
 def msc_hs_temp(s: str) -> None:
@@ -462,13 +482,14 @@ def msc_hs_temp(s: str) -> None:
 
 def msc_params_1(s: str) -> None:
     "Receive PMSM i_nom, v_nom, fs_min ans i_max."
-    global msc_i_max
+    global msc_i_max, msc_v_mon
     if not len(s) == 16:
         print(f'ERROR: msc_params_1: s={s} has no 16 chars')
         return
     i_nom = CANDataToString(s[0:4], 0.1, 1)
     builder.get_object("msc_i_nom").set_text(i_nom)
     v_nom = CANDataToString(s[4:8], 0.1, 1)
+    msc_v_nom = float(v_nom)
     builder.get_object("msc_v_nom").set_text(v_nom)
     f_min = CANDataToString(s[8:12], 0.1, 1)
     builder.get_object('msc_f_min').set_text(f_min)
@@ -477,25 +498,74 @@ def msc_params_1(s: str) -> None:
     builder.get_object('msc_i_max').set_text(i_max)
     builder.get_object('im_i_max').set_text(i_max)
     builder.get_object('im_i_line_lvl').set_max_value(msc_i_max)
+    builder.get_object('i_rms_range').set_text('0  ...  {:-6.1f}'.format(msc_i_max))
+    builder.get_object('ia_rms_lvl').set_max_value(msc_i_max)
+    builder.get_object('ib_rms_lvl').set_max_value(msc_i_max)
+    builder.get_object('ic_rms_lvl').set_max_value(msc_i_max)
+    builder.get_object('i_avg_range').set_text('0  ...  {:-6.1f}'.format(msc_i_max * 0.01))
+    builder.get_object('ia_avg_lvl').set_max_value(msc_i_max * 0.01)
+    builder.get_object('ib_avg_lvl').set_max_value(msc_i_max * 0.01)
+    builder.get_object('ic_avg_lvl').set_max_value(msc_i_max * 0.01)
+    builder.get_object('v_rms_range').set_text('0  ...  {:-6.1f}'.format(msc_v_nom * 1.5))
+    builder.get_object('va_rms_lvl').set_max_value(msc_v_nom * 1.5)
+    builder.get_object('vb_rms_lvl').set_max_value(msc_v_nom * 1.5)
+    builder.get_object('vc_rms_lvl').set_max_value(msc_v_nom * 1.5)
+    builder.get_object('v_avg_range').set_text('0  ...  {:-6.1f}'.format(msc_v_nom * 0.01))
+    builder.get_object('va_avg_lvl').set_max_value(msc_v_nom * 0.01)
+    builder.get_object('vb_avg_lvl').set_max_value(msc_v_nom * 0.01)
+    builder.get_object('vc_avg_lvl').set_max_value(msc_v_nom * 0.01)
+
+
+def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
+    i = 0
+    for ph in ['a', 'b', 'c']:
+        x = abs(CANDataToInt16(s[i]) * k)
+        builder.get_object(name + ph + '_' + meas).set_text('{:.1f}'.format(x))
+        builder.get_object(name + ph + '_' + meas + '_lvl').set_value(x)
+        i += 1
+
+
+def msc_meas_1(s: str) -> None:
+    "Receive ia, ib and ic RMS and estimated Tel."
+    set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
+
+
+def msc_meas_2(s: str) -> None:
+    "Receive ia, ib and ic average."
+    set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'avg', 0.1)
+
+
+def msc_meas_3(s: str) -> None:
+    "Receive va, vb and vc RMS and estimated Tel."
+    set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'rms', 0.1)
+
+
+def msc_meas_4(s: str) -> None:
+    "Receive ia, ib and ic average and estimated Tel."
+    set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'avg', 0.1)
 
 
 can_ids = [
     # From GSC:
-    [0x0040101, can_vbus_n_status, "Vbus P_grid V_grid status"],
-    [0xc800103, can_hs_temp, "Heatsink temp"],
-    [0xd00010c, can_params_1_1, "Params group 1 pt 1"],
-    [0xd00010d, can_params_1_2, "Params group 2 pt 1"],
-    [0xd00010e, can_meas_1_1, "Measures 1.1"],
-    [0xd00010f, can_meas_2_1, "Measures 2.1"],
-    [0xd000110, can_meas_2_2, "Measures 2.2"],
-    [0xd000111, can_meas_2_3, "Measures 2.3"],
-    [0xc400112, can_gsc_adc_1, "ADC A raw values"],
-    [0xc400113, can_gsc_adc_2, "ADC B raw values"],
-    [0xc400114, can_gsc_adc_3, "ADC C raw values"],
+    [0x0040101, gsc_vbus_n_status, "Vbus P_grid V_grid status"],
+    [0xc800103, set_gsc_hs_temp, "Heatsink temp"],
+    [0xd000109, gsc_params_1, "Params group 1"],
+    [0xd00010a, gsc_params_2, "Params group 2"],
+    [0xd00010b, gsc_meas_1, "Measures group 1"],
+    [0xd00010c, gsc_meas_2, "Measures group 2"],
+    [0xd00010d, gsc_meas_3, "Measures group 3"],
+    [0xd00010e, gsc_meas_4, "Measures group 4"],
+    [0xc40010f, can_gsc_adc_1, "ADC A raw values"],
+    [0xc400110, can_gsc_adc_2, "ADC B raw values"],
+    [0xc400111, can_gsc_adc_3, "ADC C raw values"],
     # From MSC:
     [0xc100201, msc_vbus_etal, "Vbus LineCurrent Freq Status"],
     [0xc800203, msc_hs_temp, "MSC Heatsink temperature °C"],
-    [0xd000207, msc_params_1, "MSC parameters group 1"]
+    [0xd000209, msc_params_1, "MSC parameters group 1"],
+    [0xd00020b, msc_meas_1, "MSC measurements group 1"],
+    [0xd00020c, msc_meas_2, "MSC measurements group 2"],
+    [0xd00020d, msc_meas_3, "MSC measurements group 3"],
+    [0xd00020e, msc_meas_4, "MSC measurements group 4"],
 ]
 
 
@@ -539,8 +609,8 @@ myser.debug = False  # remove this to operate
 myser.create_list()
 serial_combo = builder.get_object('serial_device')
 serial_combo.remove_all()
-for n in myser.dev_list:
-    serial_combo.append(n, n)
+for nn in myser.dev_list:
+    serial_combo.append(nn, nn)
 serial_combo.set_active(False)
 
 builder.connect_signals(Handler(builder))
@@ -559,8 +629,10 @@ def write_thread():
         if not myser.ser.isOpen():
             time.sleep(2)
             continue
-        # myser.write('twai')
-        time.sleep(5)  # TODO: review this time
+        # MSC Data request
+        myser.write('send 0e000208 003c') # meas group 1
+
+        time.sleep(2)  # TODO: review this time
 
 
 w_th = Thread(target=write_thread)

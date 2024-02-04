@@ -100,13 +100,13 @@ class CanSerial:
         if self.debug:
             print('INFO: flushing serial')
         with self.mut:
-            with self.mut_rd:
-                if self.ser.isOpen():
-                    self.ser.flushInput()
-                    self.ser.flushOutput()
-                    self.ser.cancel_write()
-                    self.ser.close()
-                    self.name = ''
+            # with self.mut_rd:
+            if self.ser.isOpen():
+                self.ser.flushInput()
+                self.ser.flushOutput()
+                self.ser.cancel_write()
+                self.ser.close()
+                self.name = ''
 
     def interpret(self):
         """Interpret commands from serial device."""
@@ -121,7 +121,7 @@ class CanSerial:
                 lst = list(f)
                 # if self.debug:
                 # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
-                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
+                # print(colored("LINE: ", "blue") + ll.decode('utf-8'))
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:
