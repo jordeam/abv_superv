@@ -322,7 +322,7 @@ def gsc_params_1(s):
     builder.get_object('droop_val').set_text('{:.1f}'.format(gsc_droop_coef * 100))
 
 
-def gsc_params_2(s):
+def gsc_params_2(s: str) -> None:
     """
     Parameters group 1 pt 2. TODO: fix it is a mess
     power_nom, vbus_peak
