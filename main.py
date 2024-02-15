@@ -528,20 +528,28 @@ def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
 def msc_meas_1(s: str) -> None:
     "Receive ia, ib and ic RMS and estimated Tel."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
+    # Estimated Tel
+    x = abs(CANDataToInt16(s[12:16])) * 0.1
+    builder.get_object('msc_tel').set_text('{:d}'.format(x))
+    builder.get_object('msc_tel_lvl').set_value(x)
 
 
 def msc_meas_2(s: str) -> None:
-    "Receive ia, ib and ic average."
+    "Receive ia, ib, ic average and encoder."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'avg', 0.1)
+    # Encoder
+    x = CANDataToInt16(s[12:16])
+    builder.get_object('msc_enc').set_text('{:d}'.format(x))
+    builder.get_object('msc_enc_lvl').set_value(x)
 
 
 def msc_meas_3(s: str) -> None:
-    "Receive va, vb and vc RMS and estimated Tel."
+    "Receive va, vb and vc RMS."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'rms', 0.1)
 
 
 def msc_meas_4(s: str) -> None:
-    "Receive ia, ib and ic average and estimated Tel."
+    "Receive ia, ib and ic average."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'avg', 0.1)
 
 
