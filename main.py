@@ -30,6 +30,7 @@ SPEED_MAX = 1200
 CURRENT_MAX = 50.0
 
 
+
 # Global parameters
 gsc_vbus_peak = 800.0
 gsc_vbus = 0.0
