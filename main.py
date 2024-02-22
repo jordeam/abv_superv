@@ -530,7 +530,7 @@ def msc_meas_1(s: str) -> None:
     "Receive ia, ib and ic RMS and estimated Tel."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
     # Estimated Tel
-    x = abs(CANDataToInt16(s[12:16])) * 0.1
+    x = int(abs(CANDataToInt16(s[12:16])) * 0.1)
     builder.get_object('msc_tel').set_text('{:d}'.format(x))
     builder.get_object('msc_tel_lvl').set_value(x)
 
