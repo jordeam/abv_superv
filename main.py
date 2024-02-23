@@ -51,7 +51,7 @@ gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
 gsc_i_max_p = 510.0  # maximum peak current
 gsc_i_line = 220.0  # grid injected current RMS value
 gsc_hs_temp = 105.0  # Heatsink temperature in °C
-gsc_status = 0  # status
+gsc_status: int = 0  # status
 gsc_adc_raw = False  # if True, GSC must send ADC raw data values
 gsc_droop_coef = 0.04  # reactive droop coefficient
 gsc_target_fp = 1.0  # target power factor
@@ -165,8 +165,9 @@ class Handler:
         entry_mode = self.builder.get_object('msc_mode')
         entry_mode.set_text('Running')
         x = builder.get_object('adj_op_current').get_value()
-        i_ref = x * float(s_i_nom) * 0.01
-        msc_active = True
+        i_ref = int(x * 10)
+        if i_ref < 0:
+            i_ref = 0x10000 + i_ref
         cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
         print(f'start_clicked: cmd={cmd}')
         myser.write(cmd)
