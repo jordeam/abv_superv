@@ -3163,6 +3163,7 @@
                                                     <property name="can-focus">True</property>
                                                     <property name="receives-default">False</property>
                                                     <property name="draw-indicator">True</property>
+                                                    <signal name="toggled" handler="on_msc_adc_raw_toggled" swapped="no"/>
                                                   </object>
                                                   <packing>
                                                     <property name="expand">False</property>
@@ -3352,7 +3353,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkEntry" id="msc_adc_b13">
+                                                      <object class="GtkEntry" id="msc_adc_b14">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="editable">False</property>

@@ -46,6 +46,7 @@ class CanSerial:
 
     def write(self, s: str):
         """Safe wrapper to serial write function."""
+        print(s)
         if self.debug:
             print(s)
         with self.mut:
@@ -121,7 +122,7 @@ class CanSerial:
                 lst = list(f)
                 # if self.debug:
                 # print(colored("LINE ", "blue") + f"{ll.decode('utf-8')}, lst={lst}")
-                # print(colored("LINE: ", "blue") + ll.decode('utf-8'))
+                print(colored("LINE: ", "blue") + ll.decode('utf-8'))
             except UnicodeDecodeError:
                 lst = []
             if len(lst) > 0:

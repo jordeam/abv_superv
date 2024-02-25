@@ -18,6 +18,7 @@ import ctypes
 from termcolor import colored
 import gi
 from canserial import CanSerial
+from twai_ids import *
 
 gi.require_version("Gtk", "3.0")
 
@@ -206,6 +207,13 @@ class Handler:
             cmd = 'send 1ffc0700 {:02x}'.format((0x80 if inv_active else 0) + inv_da)
             print(f'INV: {cmd}')
             myser.write(cmd)
+
+    def on_msc_adc_raw_toggled(self, wdg):
+        if wdg.get_active():
+            cmd = 'send {:08x} {:04x}'.format(MSCID_DATA_REQ, 0x40)
+        else:
+            cmd = 'send {:08x} {:04x}'.format(MSCID_DATA_REQ, 0x80)
+        myser.write(cmd)
 
 
 def set_version(ver):
@@ -454,17 +462,24 @@ def msc_vbus_etal(s: str) -> None:
         print(f'ERROR: msc_vbus_etal: s={s} has no 16 chars')
         return
     # print('can_msc_vbus_etal:')
-    txt = CANDataToString(s[0:4], 0.1, 1)
+    # Vbus
+    x: float = abs(CANDataToInt16(s[0:4]) * 0.1)
+    txt = "{:.1f}".format(x)
     builder.get_object('msc_vbus').set_text(txt)
     builder.get_object('msc_vbus_lvl').set_value(float(txt))
     # print(f'can_msc_vbus_etal: Vbus={txt}')
-    txt = CANDataToString(s[4:8], 0.1, 1)
+    # Line Current
+    x: float = abs(CANDataToInt16(s[4:8]) * 0.1)
+    txt = "{:.1f}".format(x)
     builder.get_object('im_i_line').set_text(txt)
     builder.get_object('im_i_line_lvl').set_value(float(txt))
-    txt = CANDataToString(s[8:12], 0.1, 1)
+    # Frequency
+    x: float = abs(CANDataToInt16(s[8:12]) * 0.1)
+    txt = "{:.1f}".format(x)
     builder.get_object('im_fs').set_text(txt)
     builder.get_object('im_fs_lvl').set_value(float(txt))
-    status = struct.unpack("!i", bytes.fromhex(str_to_size(s[12:16], 8)))[0]
+    # Status
+    status = CANDataToUInt16(s[12:16])
     builder.get_object('inv1_enabled').set_active(status & 1)
     builder.get_object('msc_active').set_active(status & 2)
     builder.get_object('pll_good').set_active(status & 4)
@@ -500,22 +515,30 @@ def msc_params_1(s: str) -> None:
     builder.get_object('msc_i_max').set_text(i_max)
     builder.get_object('im_i_max').set_text(i_max)
     builder.get_object('im_i_line_lvl').set_max_value(msc_i_max)
-    builder.get_object('i_rms_range').set_text('0  ...  {:-6.1f}'.format(msc_i_max))
-    builder.get_object('ia_rms_lvl').set_max_value(msc_i_max)
-    builder.get_object('ib_rms_lvl').set_max_value(msc_i_max)
-    builder.get_object('ic_rms_lvl').set_max_value(msc_i_max)
-    builder.get_object('i_avg_range').set_text('0  ...  {:-6.1f}'.format(msc_i_max * 0.01))
-    builder.get_object('ia_avg_lvl').set_max_value(msc_i_max * 0.01)
-    builder.get_object('ib_avg_lvl').set_max_value(msc_i_max * 0.01)
-    builder.get_object('ic_avg_lvl').set_max_value(msc_i_max * 0.01)
-    builder.get_object('v_rms_range').set_text('0  ...  {:-6.1f}'.format(msc_v_nom * 1.5))
-    builder.get_object('va_rms_lvl').set_max_value(msc_v_nom * 1.5)
-    builder.get_object('vb_rms_lvl').set_max_value(msc_v_nom * 1.5)
-    builder.get_object('vc_rms_lvl').set_max_value(msc_v_nom * 1.5)
-    builder.get_object('v_avg_range').set_text('0  ...  {:-6.1f}'.format(msc_v_nom * 0.01))
-    builder.get_object('va_avg_lvl').set_max_value(msc_v_nom * 0.01)
-    builder.get_object('vb_avg_lvl').set_max_value(msc_v_nom * 0.01)
-    builder.get_object('vc_avg_lvl').set_max_value(msc_v_nom * 0.01)
+    # i rms
+    i_rms_max = msc_i_max * 1.1
+    builder.get_object('i_rms_range').set_text('0  ...  {:-6.1f}'.format(i_rms_max))
+    builder.get_object('ia_rms_lvl').set_max_value(i_rms_max)
+    builder.get_object('ib_rms_lvl').set_max_value(i_rms_max)
+    builder.get_object('ic_rms_lvl').set_max_value(i_rms_max)
+    # i avg
+    i_avg_max = msc_i_max * 1.1
+    builder.get_object('i_avg_range').set_text('0  ...  {:-6.1f}'.format(i_avg_max))
+    builder.get_object('ia_avg_lvl').set_max_value(i_avg_max)
+    builder.get_object('ib_avg_lvl').set_max_value(i_avg_max)
+    builder.get_object('ic_avg_lvl').set_max_value(i_avg_max)
+    # v rms
+    v_rms_max = msc_v_nom * 1.25
+    builder.get_object('v_rms_range').set_text('0  ...  {:-6.1f}'.format(v_rms_max))
+    builder.get_object('va_rms_lvl').set_max_value(v_rms_max)
+    builder.get_object('vb_rms_lvl').set_max_value(v_rms_max)
+    builder.get_object('vc_rms_lvl').set_max_value(v_rms_max)
+    # v avg
+    v_avg_max = msc_v_nom * 1.1
+    builder.get_object('v_avg_range').set_text('0  ...  {:-6.1f}'.format(v_avg_max))
+    builder.get_object('va_avg_lvl').set_max_value(v_avg_max)
+    builder.get_object('vb_avg_lvl').set_max_value(v_avg_max)
+    builder.get_object('vc_avg_lvl').set_max_value(v_avg_max)
 
 
 def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
@@ -554,6 +577,23 @@ def msc_meas_4(s: str) -> None:
     "Receive ia, ib and ic average."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'avg', 0.1)
 
+def msc_adc_a(s: str) -> None:
+    builder_set(s[0:4], 'msc_adc_a1')
+    builder_set(s[4:8], 'msc_adc_a2')
+    builder_set(s[8:12], 'msc_adc_a3')
+    builder_set(s[12:16], 'msc_adc_a4')
+
+def msc_adc_b(s: str) -> None:
+    builder_set(s[0:4], 'msc_adc_b14')
+    builder_set(s[4:8], 'msc_adc_b2')
+    builder_set(s[8:12], 'msc_adc_b3')
+    builder_set(s[12:16], 'msc_adc_b4')
+
+def msc_adc_c(s: str) -> None:
+    builder_set(s[0:4], 'msc_adc_c14')
+    builder_set(s[4:8], 'msc_adc_c2')
+    builder_set(s[8:12], 'msc_adc_c3')
+    builder_set(s[12:16], 'msc_adc_c4')
 
 can_ids = [
     # From GSC:
@@ -576,6 +616,9 @@ can_ids = [
     [0xd00020c, msc_meas_2, "MSC measurements group 2"],
     [0xd00020d, msc_meas_3, "MSC measurements group 3"],
     [0xd00020e, msc_meas_4, "MSC measurements group 4"],
+    [MSCID_ADCA, msc_adc_a, "MSC ADC A raw values"],
+    [MSCID_ADCB, msc_adc_b, "MSC ADC B raw values"],
+    [MSCID_ADCC, msc_adc_c, "MSC ADC C raw values"]
 ]
 
 
