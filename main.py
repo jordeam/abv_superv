@@ -33,13 +33,12 @@ CURRENT_MAX = 50.0
 
 
 # Global parameters
-gsc_vbus_peak = 800.0
 gsc_vbus = 0.0
-gsc_vbus_max = 740.0
-gsc_vbus_target_max = 700.0
-gsc_vbus_target_min = 680.0
-gsc_vbus_op_min = 660.0
-gsc_vbus_crit_min = 630.0
+gsc_vbus_max = 0.0  # Maximum bus voltage
+gsc_vbus_target_max = 0.0
+gsc_vbus_target_min = 0.0
+gsc_vbus_min = 0.0
+
 gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
 gsc_power_max = 275e3  # Maximum allowed active power to be injected
@@ -47,9 +46,9 @@ gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
 gsc_vgrid_max = 480.0  # Maximum grid voltage
 gsc_vgrid_imbalance = 0.02  # measured grid voltage imbalance
-gsc_i_max: float = 0.0  # maximum current
-gsc_i_min: float = 0.0  # minimum current
-gsc_f_nom: float = 0.0  # nominal frequency
+gsc_i_max = 0.0  # maximum current
+gsc_i_min = 0.0  # minimum current
+gsc_f_nom = 0.0  # nominal frequency
 gsc_hs_temp = 125.0  # Heatsink temperature in °C
 gsc_status: int = 0  # status
 gsc_adc_raw = False  # if True, GSC must send ADC raw data values
@@ -134,15 +133,18 @@ class Handler:
         else:
             serial_status.set_from_stock(Gtk.STOCK_DIALOG_WARNING, Gtk.IconSize.LARGE_TOOLBAR)
 
+    def on_connect_btn_clicked(self, _):
+        self.on_connect_clicked(self)
+
     def on_gsc_adc_raw_toggled(self, wdg):
         """Enable raw data CAN commando for GSC."""
         # global gsc_adc_raw
         if wdg.get_active():
             print('ADC raw active')
-            myser.write('send e00010b 0001')
+            myser.write('send {:08x} 0040'.format(ids.GSCID_DATA_REQ))
         else:
             print('ADC raw inactive')
-            myser.write('send e00010b 0002')
+            myser.write('send {:08x} 0080'.format(ids.GSCID_DATA_REQ))
 
     #
     # MSC
@@ -214,21 +216,13 @@ class Handler:
 
 def set_version(ver):
     """Set ESP32 firmware version."""
-    set_version.i += 1
     version = builder.get_object('version')
     version.set_text('Version: {}'.format(ver[1]))
     # Taking a chance to get parameters:
-    print(f"INFO: i={set_version.i}")
-    if set_version.i == 1:
-        print('INFO: sending MSC parameters request')
-        myser.write('send {:08x} 0001'.format(ids.MSCID_DATA_REQ))
-        myser.write('version')
-    elif set_version.i == 2:
-        print('INFO: sending GSC parameters request')
-        myser.write('send {:08x} 0001'.format(ids.GSCID_DATA_REQUEST))
-    else:
-        set_version.i = 3;
-set_version.i = 0
+    print('INFO: sending MSC parameters request')
+    myser.write('send {:08x} 0001'.format(ids.MSCID_DATA_REQ))
+    print('INFO: sending GSC parameters group 1 and 2 request')
+    myser.write('send {:08x} 0003'.format(ids.GSCID_DATA_REQ))
 
 
 def str_to_size(s: str, size: int) -> str:
@@ -258,11 +252,15 @@ def CANDataToUInt16(s: str) -> int:
     return val
 
 
-def builder_set(s: str, label: str, k=1.0, n=0, unit='') -> None:
+def builder_set(s: str, label: str, k=1.0, n_dec=0, unit='', signed=False) -> None:
     """Set a GTK label with value from s, no scale."""
     # global builder
-    s = CANDataToString(s, k, n, unit)
-    builder.get_object(label).set_text(s)
+    if signed:
+        val = CANDataToInt16(s) * k
+    else:
+        val = CANDataToUInt16(s) * k
+    fmt = f'{{:.{n_dec}f}}{unit}'
+    builder.get_object(label).set_text(fmt.format(val))
 
 
 def gsc_vbus_n_status(s):
@@ -271,14 +269,24 @@ def gsc_vbus_n_status(s):
     """
     # global builder
     global gsc_vbus, gsc_status
-    if not len(s) == 8:
-        print(f'ERROR: gsc_vbus_n_status: s={s} has not 8 chars')
+    if not len(s) == 16:
+        print(f'ERROR: gsc_vbus_n_status: s={s} has not 16 chars')
     gsc_vbus = CANDataToInt16(s[0:4]) * 0.1
-    gsc_status = CANDataToUInt16(s[4:8])
+    gsc_status = CANDataToUInt16(s[12:16])
     # Vbus
     txt = '{:.1f}'.format(gsc_vbus)
     builder.get_object('gsc_vbus').set_text(txt)
     builder.get_object('gsc_vbus_lvl').set_value(gsc_vbus)
+    # i_rms
+    i_rms = CANDataToUInt16(s[4:8]) * 0.1
+    txt = '{:.1f}'.format(i_rms)
+    builder.get_object('gsc_i_line').set_text(txt)
+    builder.get_object('gsc_i_line_lvl').set_value(i_rms)
+    # Output power
+    p_out = CANDataToInt16(s[8:12]) * 0.1
+    txt = '{:.1f}'.format(p_out)
+    builder.get_object('gsc_power').set_text(txt)
+    builder.get_object('gsc_power_lvl').set_value(p_out)
     # Status
     builder.get_object('gsc_inv_enabled').set_active(gsc_status & 1)
     builder.get_object('gsc_imbalanced').set_active(gsc_status & 2)
@@ -287,6 +295,19 @@ def gsc_vbus_n_status(s):
     builder.get_object('gsc_off').set_active(gsc_mode == 0)
     builder.get_object('gsc_normal').set_active(gsc_mode == 1)
     builder.get_object('gsc_discharge').set_active(gsc_mode == 2)
+    # Program Mode
+    gsc_program_mode = (gsc_status >> 2) & 7
+    match gsc_program_mode:
+        case 0:
+            builder.get_object('gsc_program_mode').set_text('Initializing')
+        case 1:
+            builder.get_object('gsc_program_mode').set_text('Checking UCC5870')
+        case 2:
+            builder.get_object('gsc_program_mode').set_text('Running OK')
+        case 3:
+            builder.get_object('gsc_program_mode').set_text('Emulation')
+        case _:
+            print('ERROR: got invalid gsc_program_mode')
 
 
 def set_gsc_hs_temp(s):
@@ -307,13 +328,20 @@ def gsc_params_1(s):
     Parameters group 1 pt 1.
     target_fp, vgrid_nom, max_peak_current, droop_coef
     """
-    # global builder
+    global gsc_power_max
     global gsc_i_max, gsc_i_min, gsc_f_nom
     if not len(s) == 12:
         print(f'ERROR: gsc_params_1: s={s} has not 12 chars')
     # print(f'target_fp = {s[0:4]}')
     gsc_i_max = float(CANDataToInt16(s[0:4]))
-    builder.get_object("gsc_i_max").set_text("{:.1f}".format(gsc_i_max))
+    txt = "{:.1f}".format(gsc_i_max)
+    builder.get_object("gsc_i_max").set_text(txt)
+    builder.get_object("gsc_i_line_max").set_text(txt)
+    builder.get_object("gsc_i_line_lvl").set_max_value(gsc_i_max)
+    if gsc_vbus_max != 0:
+        gsc_power_max = gsc_vbus_max * gsc_i_max
+        builder.get_object('gsc_power_max').set_text('{:.1f}'.format(gsc_power_max))
+        builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
     gsc_i_min = float(CANDataToInt16(s[4:8]))
     builder.get_object('gsc_i_min').set_text('{:.1f}'.format(gsc_i_min))
     gsc_f_nom = float(CANDataToInt16(s[8:12]))
@@ -324,14 +352,19 @@ def gsc_params_2(s: str) -> None:
     """
     Parameters group  2.
     """
+    global gsc_power_max, gsc_vbus_max
     if not len(s) == 16:
         print(f'ERROR: gsc_params_2: s={s} has not 16 chars')
     # VBUS_MAX
-    x = float(CANDataToUInt16(s[0:4]))
-    txt = '{:.1f}'.format(x)
+    gsc_vbus_max = float(CANDataToUInt16(s[0:4]))
+    if gsc_i_max != 0:
+        gsc_power_max = gsc_vbus_max * gsc_i_max
+        builder.get_object('gsc_power_max').set_text('{:.0f}'.format(gsc_power_max))
+        builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
+    txt = '{:.1f}'.format(gsc_vbus_max)
     builder.get_object("gsc_vbus_max").set_text(txt)
     builder.get_object("gsc_vbus_peak").set_text(txt)
-    builder.get_object("gsc_vbus_lvl").set_max_value(x)
+    builder.get_object("gsc_vbus_lvl").set_max_value(gsc_vbus_max)
     #VBUS_TARGET_MAX
     x = float(CANDataToUInt16(s[4:8]))
     builder.get_object("gsc_vbus_target_max").set_text('{:.1f}'.format(x))
@@ -354,7 +387,7 @@ def gsc_meas_1(s):
     builder_set(s[0:4], 'ila_rms', 0.1, 1)
     builder_set(s[4:8], 'ilb_rms', 0.1, 1)
     builder_set(s[8:12], 'ilc_rms', 0.1, 1)
-    builder_set(s[12:16], 'gsc_vgrid_imbalance', 1e-1, 1)
+    builder_set(s[12:16], 'gsc_imbalance', 1e-1, 1)
 
 
 def gsc_meas_2(s):
@@ -364,11 +397,11 @@ def gsc_meas_2(s):
     """
     # global builder
     if not len(s) == 16:
-        print(f'ERROR: gsc_meas_2: s={s} has not 16 chars')
+        print(f'ERROR: gsc_meas_2: s={s} has not 12 chars')
         return
-    builder_set(s[0:4], 'ila_avg', 0.1, 1)
-    builder_set(s[4:8], 'ilb_avg', 0.1, 1)
-    builder_set(s[8:12], 'ilc_avg', 0.1, 1)
+    builder_set(s[0:4], 'ila_avg', 0.1, 1, signed=True)
+    builder_set(s[4:8], 'ilb_avg', 0.1, 1, signed=True)
+    builder_set(s[8:12], 'ilc_avg', 0.1, 1, signed=True)
 
 
 def gsc_meas_3(s):
@@ -377,8 +410,8 @@ def gsc_meas_3(s):
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
-    if not len(s) == 16:
-        print(f'ERROR: gsc_meas_3: s={s} has not 16 chars')
+    if not len(s) == 12:
+        print(f'ERROR: gsc_meas_3: s={s} has not 12 chars')
         return
     builder_set(s[0:4], 'vga_rms', 0.1, 1)
     builder_set(s[4:8], 'vgb_rms', 0.1, 1)
@@ -391,12 +424,12 @@ def gsc_meas_4(s):
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
-    if not len(s) == 16:
-        print(f'ERROR: gsc_meas_4: s={s} has not 16 chars')
+    if not len(s) == 12:
+        print(f'ERROR: gsc_meas_4: s={s} has not 12 chars')
         return
-    builder_set(s[0:4], 'vga_avg', 0.1, 1)
-    builder_set(s[4:8], 'vgb_avg', 0.1, 1)
-    builder_set(s[8:12], 'vgc_avg', 0.1, 1)
+    builder_set(s[0:4], 'vga_avg', 0.1, 1, signed=True)
+    builder_set(s[4:8], 'vgb_avg', 0.1, 1, signed=True)
+    builder_set(s[8:12], 'vgc_avg', 0.1, 1, signed=True)
 
 
 def can_gsc_adc_1(s):
@@ -409,6 +442,11 @@ def can_gsc_adc_1(s):
     builder_set(s[4:8], "gsc_adc_a2")
     builder_set(s[8:12], "gsc_adc_a3")
     builder_set(s[12:16], "gsc_adc_a4")
+    # copies
+    builder_set(s[0:4], "gsc_adc_a1_")
+    builder_set(s[4:8], "gsc_adc_a2_")
+    builder_set(s[8:12], "gsc_adc_a3_")
+    builder_set(s[12:16], "gsc_adc_a4_")
 
 
 def can_gsc_adc_2(s):
@@ -420,7 +458,7 @@ def can_gsc_adc_2(s):
     builder_set(s[4:8], 'gsc_adc_b2')
     builder_set(s[8:12], 'gsc_adc_b3')
     builder_set(s[12:16], 'gsc_adc_b4')
-
+    # no copies
 
 def can_gsc_adc_3(s):
     """Set ADC group 2: ADC_C14, ADC_C2 .. 4."""
@@ -431,6 +469,9 @@ def can_gsc_adc_3(s):
     builder_set(s[4:8], 'gsc_adc_c2')
     builder_set(s[8:12], 'gsc_adc_c3')
     builder_set(s[12:16], 'gsc_adc_c4')
+    # copies
+    builder_set(s[4:8], 'gsc_adc_c2_')
+    builder_set(s[12:16], 'gsc_adc_c4_')
 
 
 def msc_vbus_etal(s: str) -> None:
@@ -529,6 +570,7 @@ def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
 
 def msc_meas_1(s: str) -> None:
     "Receive ia, ib and ic RMS and estimated Tel."
+    print('msc_meas_1')
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
     # Estimated Tel
     x = int(abs(CANDataToInt16(s[12:16])) * 0.1)
@@ -559,6 +601,11 @@ def msc_adc_a(s: str) -> None:
     builder_set(s[4:8], 'msc_adc_a2')
     builder_set(s[8:12], 'msc_adc_a3')
     builder_set(s[12:16], 'msc_adc_a4')
+    # copies
+    builder_set(s[0:4], "msc_adc_a1_")
+    builder_set(s[4:8], "msc_adc_a2_")
+    builder_set(s[8:12], "msc_adc_a3_")
+    builder_set(s[12:16], "msc_adc_a4_")
 
 def msc_adc_b(s: str) -> None:
     builder_set(s[0:4], 'msc_adc_b14')
@@ -571,6 +618,10 @@ def msc_adc_c(s: str) -> None:
     builder_set(s[4:8], 'msc_adc_c2')
     builder_set(s[8:12], 'msc_adc_c3')
     builder_set(s[12:16], 'msc_adc_c4')
+    # copies
+    builder_set(s[4:8], 'msc_adc_c2_')
+    builder_set(s[12:16], 'msc_adc_c4_')
+
 
 can_ids = [
     # From GSC:
@@ -655,13 +706,22 @@ r_th.start()
 
 def write_thread():
     """Write serial commands. TODO: the commands."""
+    i: int = 0
     while True:
+        i += 1
         if not myser.ser.isOpen():
             time.sleep(2)
             continue
-        # MSC Data request
-        myser.write('send 0e000208 003c') # meas group 1
-
+        if i == 1:
+            # MSC meas group 1, 2, 3 and 4
+            myser.write('send {:08x} 003c'.format(ids.MSCID_DATA_REQ))
+        elif i == 2:
+            # GSC meas group 1, 2, 3 and 4
+            myser.write('send {:08x} 003c'.format(ids.GSCID_DATA_REQ)) # meas group 1
+            # Go to MSC again
+            i = 0
+        else:
+            i = 0
         time.sleep(2)  # TODO: review this time
 
 
