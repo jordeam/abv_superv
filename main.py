@@ -242,13 +242,13 @@ def CANDataToString(s: str, k=1.0, n_dec=0, unit='') -> str:
 
 def CANDataToInt16(s: str) -> int:
     "Return signed integer from string s being data of CAN message."
-    val = struct.unpack("!h", bytes.fromhex(str_to_size(s, 4)))[0]
+    val = struct.unpack("!h", bytes.fromhex(s))[0]
     return val
 
 
 def CANDataToUInt16(s: str) -> int:
     "Return signed integer from string s being data of CAN message."
-    val = struct.unpack("!H", bytes.fromhex(str_to_size(s, 4)))[0]
+    val = struct.unpack("!H", bytes.fromhex(s))[0]
     return val
 
 
@@ -396,7 +396,7 @@ def gsc_meas_2(s):
     vga_rms, vgb_rms, vgc_rms, ila_avg
     """
     # global builder
-    if not len(s) == 16:
+    if not len(s) == 12:
         print(f'ERROR: gsc_meas_2: s={s} has not 12 chars')
         return
     builder_set(s[0:4], 'ila_avg', 0.1, 1, signed=True)
@@ -562,7 +562,7 @@ def msc_params_1(s: str) -> None:
 def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
     i = 0
     for ph in ['a', 'b', 'c']:
-        x = abs(CANDataToInt16(s[i]) * k)
+        x = CANDataToInt16(s[i]) * k
         builder.get_object(name + ph + '_' + meas).set_text('{:.1f}'.format(x))
         builder.get_object(name + ph + '_' + meas + '_lvl').set_value(x)
         i += 1
@@ -570,7 +570,7 @@ def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
 
 def msc_meas_1(s: str) -> None:
     "Receive ia, ib and ic RMS and estimated Tel."
-    print('msc_meas_1')
+    # print('msc_meas_1')
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
     # Estimated Tel
     x = int(abs(CANDataToInt16(s[12:16])) * 0.1)
