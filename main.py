@@ -325,7 +325,7 @@ def set_gsc_hs_temp(s):
 
 def gsc_params_1(s):
     """
-    Parameters group 1 pt 1.
+    Parameters group 1
     target_fp, vgrid_nom, max_peak_current, droop_coef
     """
     global gsc_power_max
@@ -350,7 +350,7 @@ def gsc_params_1(s):
 
 def gsc_params_2(s: str) -> None:
     """
-    Parameters group  2.
+    Parameters group 2
     """
     global gsc_power_max, gsc_vbus_max
     if not len(s) == 16:
@@ -378,8 +378,7 @@ def gsc_params_2(s: str) -> None:
 
 def gsc_meas_1(s):
     """
-    Measures group 1 pt 1.
-    reactive_power, voltage_imbalance, injected_current, grid_freq
+    Measures group 1
     """
     # global builder
     if not len(s) == 16:
@@ -573,7 +572,7 @@ def msc_meas_1(s: str) -> None:
     # print('msc_meas_1')
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
     # Estimated Tel
-    x = int(abs(CANDataToInt16(s[12:16])) * 0.1)
+    x = int(CANDataToInt16(s[12:16]) * 0.1)
     builder.get_object('msc_tel').set_text('{:d}'.format(x))
     builder.get_object('msc_tel_lvl').set_value(x)
 
