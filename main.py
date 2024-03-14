@@ -252,7 +252,7 @@ def CANDataToUInt16(s: str) -> int:
     return val
 
 
-def builder_set(s: str, label: str, k=1.0, n_dec=0, unit='', signed=False) -> None:
+def builder_set(s: str, label: str, k=1.0, n_dec=0, unit='', signed=True) -> None:
     """Set a GTK label with value from s, no scale."""
     # global builder
     if signed:
