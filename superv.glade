@@ -2277,7 +2277,7 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkEntry" id="gsc_adc_a1">
+                                      <object class="GtkEntry" id="gsc_adc_c2">
                                         <property name="visible">True</property>
                                         <property name="can-focus">True</property>
                                         <property name="editable">False</property>
@@ -2291,98 +2291,11 @@
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">A4:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">4</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_a4">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="editable">False</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">4</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">C4:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">3</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_c4">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="editable">False</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">3</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">A2:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">0</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_a2">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">0</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">C2:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">1</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_c2">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="editable">False</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">1</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
                                         <property name="label" translatable="yes">A3:</property>
                                       </object>
                                       <packing>
                                         <property name="left-attach">2</property>
-                                        <property name="top-attach">2</property>
+                                        <property name="top-attach">4</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -2393,7 +2306,29 @@
                                       </object>
                                       <packing>
                                         <property name="left-attach">3</property>
-                                        <property name="top-attach">2</property>
+                                        <property name="top-attach">4</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">x14: </property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_b14">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="editable">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">3</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -2401,6 +2336,71 @@
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
                                         <property name="label" translatable="yes">A1:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a1">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">A4:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">1</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a4">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="editable">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">1</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">A2:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a2">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="editable">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">C2:</property>
                                       </object>
                                       <packing>
                                         <property name="left-attach">2</property>
@@ -2583,97 +2583,11 @@
                                       <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">A1:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">5</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_a1_">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="editable">False</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">5</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">A4:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">4</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_a4_">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                        <property name="editable">False</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">4</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_c4_">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">3</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">C4:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">3</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
-                                        <property name="label" translatable="yes">A2:</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">2</property>
-                                        <property name="top-attach">0</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkEntry" id="gsc_adc_a2_">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">True</property>
-                                      </object>
-                                      <packing>
-                                        <property name="left-attach">3</property>
-                                        <property name="top-attach">0</property>
-                                      </packing>
-                                    </child>
-                                    <child>
-                                      <object class="GtkLabel">
-                                        <property name="visible">True</property>
-                                        <property name="can-focus">False</property>
                                         <property name="label" translatable="yes">C2:</property>
                                       </object>
                                       <packing>
                                         <property name="left-attach">2</property>
-                                        <property name="top-attach">1</property>
+                                        <property name="top-attach">5</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -2684,7 +2598,7 @@
                                       </object>
                                       <packing>
                                         <property name="left-attach">3</property>
-                                        <property name="top-attach">1</property>
+                                        <property name="top-attach">5</property>
                                       </packing>
                                     </child>
                                     <child>
@@ -2695,11 +2609,97 @@
                                       </object>
                                       <packing>
                                         <property name="left-attach">2</property>
-                                        <property name="top-attach">2</property>
+                                        <property name="top-attach">4</property>
                                       </packing>
                                     </child>
                                     <child>
                                       <object class="GtkEntry" id="gsc_adc_a3_">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="editable">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">4</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_c14">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">x14:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">A1:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a1_">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">A4:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">1</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a4_">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">True</property>
+                                        <property name="editable">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">1</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">A2:</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkEntry" id="gsc_adc_a2_">
                                         <property name="visible">True</property>
                                         <property name="can-focus">True</property>
                                         <property name="editable">False</property>
@@ -2737,7 +2737,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="label" translatable="yes">B14:</property>
+                                <property name="label" translatable="yes">C4:</property>
                               </object>
                               <packing>
                                 <property name="left-attach">0</property>
@@ -2745,7 +2745,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkEntry" id="gsc_adc_b14">
+                              <object class="GtkEntry" id="gsc_adc_c4">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="editable">False</property>
@@ -2759,7 +2759,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
-                                <property name="label" translatable="yes">C14:</property>
+                                <property name="label" translatable="yes">C4:</property>
                               </object>
                               <packing>
                                 <property name="left-attach">2</property>
@@ -2767,7 +2767,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkEntry" id="gsc_adc_c14">
+                              <object class="GtkEntry" id="gsc_adc_c4_">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="editable">False</property>

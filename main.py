@@ -459,6 +459,7 @@ def can_gsc_adc_2(s):
     builder_set(s[12:16], 'gsc_adc_b4')
     # no copies
 
+    
 def can_gsc_adc_3(s):
     """Set ADC group 2: ADC_C14, ADC_C2 .. 4."""
     if not len(s) == 16:
