@@ -33,6 +33,9 @@ CURRENT_MAX = 50.0
 
 
 # Global parameters
+
+running_states = ['INIT', 'OFFSET', 'PLL', 'ENC_CAL', 'READY', 'RUNNING', 'OVERHEAT', 'OPENPHASE', 'HIGH_VBUS', 'ENC_FAIL', 'DISCHARGE']
+
 gsc_vbus = 0.0
 gsc_vbus_max = 0.0  # Maximum bus voltage
 gsc_vbus_target_max = 0.0
@@ -79,8 +82,6 @@ class Handler:
 
     def __init__(self, _builder):
         self.builder = _builder
-        entry_mode = self.builder.get_object('msc_mode')
-        entry_mode.set_text('Stopped')
 
     def onDestroy(self, _):
         """Destroy loops."""
@@ -150,39 +151,18 @@ class Handler:
     # MSC
     #
     def on_msc_stop_clicked(self, _btn):
-        global msc_active
-        entry_mode = self.builder.get_object('msc_mode')
-        entry_mode.set_text('Stopped')
-        msc_active = False
+        msc_i_ref = self.builder.get_object('msc_i_ref')
+        msc_i_ref.set_value(0.0)
         myser.write('send E000205 0000')
-
-    def on_msc_start_clicked(self, _btn):
-        global msc_active
-        s_i_nom = builder.get_object('msc_i_nom').get_text()
-        if (len(s_i_nom) < 2):
-            print('ERR: msc_i_nom is not set')
-            return
-        entry_mode = self.builder.get_object('msc_mode')
-        entry_mode.set_text('Running')
-        x = builder.get_object('adj_op_current').get_value()
-        i_ref = int(x * 10)
-        if i_ref < 0:
-            i_ref = 0x10000 + i_ref
-        cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
-        print(f'start_clicked: cmd={cmd}')
-        myser.write(cmd)
 
     def on_adj_op_current_value_changed(self, wdg):
         x = wdg.get_value()
-        print(f'vc msc_i_ref={x}')
-        if msc_active:
-            s_i_nom = builder.get_object('msc_i_nom').get_text()
-            if (len(s_i_nom) < 2):
-                print('ERR: msc_i_nom is not set')
-                return
-            i_ref = x * float(s_i_nom) * 0.01
-            cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
-            myser.write(cmd)
+        print(f'set: msc_i_ref={x}')
+        i_ref = (x * 10)
+        if i_ref < 0:
+            i_ref = 0xffff + i_ref
+        cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
+        myser.write(cmd)
 
     def on_inv_active_toggled(self, wdg):
         global inv_active
@@ -288,26 +268,14 @@ def gsc_vbus_n_status(s):
     builder.get_object('gsc_power').set_text(txt)
     builder.get_object('gsc_power_lvl').set_value(p_out)
     # Status
-    builder.get_object('gsc_inv_enabled').set_active(gsc_status & 1)
-    builder.get_object('gsc_imbalanced').set_active(gsc_status & 2)
-    # gsc_mode
-    gsc_mode = (gsc_status >> 5) & 3
-    builder.get_object('gsc_off').set_active(gsc_mode == 0)
-    builder.get_object('gsc_normal').set_active(gsc_mode == 1)
-    builder.get_object('gsc_discharge').set_active(gsc_mode == 2)
-    # Program Mode
-    gsc_program_mode = (gsc_status >> 2) & 7
-    match gsc_program_mode:
-        case 0:
-            builder.get_object('gsc_program_mode').set_text('Initializing')
-        case 1:
-            builder.get_object('gsc_program_mode').set_text('Checking UCC5870')
-        case 2:
-            builder.get_object('gsc_program_mode').set_text('Running OK')
-        case 3:
-            builder.get_object('gsc_program_mode').set_text('Emulation')
-        case _:
-            print('ERROR: got invalid gsc_program_mode')
+    # Status
+    status = CANDataToUInt16(s[12:16]) & 0x0f
+    if status in (5, 10):
+        builder.get_object('gsc_inv_enabled').set_active(True)
+    if status < len(running_states):
+        builder.get_object('gsc_state').set_text(running_states[status])
+    else:
+        builder.get_object('gsc_state').set_text('???')
 
 
 def set_gsc_hs_temp(s):
@@ -497,12 +465,13 @@ def msc_vbus_etal(s: str) -> None:
     builder.get_object('im_fs').set_text(txt)
     builder.get_object('im_fs_lvl').set_value(float(txt))
     # Status
-    status = CANDataToUInt16(s[12:16])
-    builder.get_object('inv1_enabled').set_active(status & 1)
-    builder.get_object('msc_active').set_active(status & 2)
-    builder.get_object('pll_good').set_active(status & 4)
-    builder.get_object('encoder_is_calibrated').set_active(status & 8)
-    builder.get_object('encoder_is_valid').set_active(status & 0x10)
+    status = CANDataToUInt16(s[12:16]) & 0x0f
+    if status in (5, 10):
+        builder.get_object('inv1_enabled').set_active(True)
+    if status < len(running_states):
+        builder.get_object('msc_state').set_text(running_states[status])
+    else:
+        builder.get_object('msc_state').set_text('???')
 
 
 def msc_hs_temp(s: str) -> None:
