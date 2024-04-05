@@ -62,7 +62,6 @@ gsc_fgrid_nom = 60.0  # grid nominal frequency
 #
 # MSC
 #
-msc_active: bool = False
 msc_i_max: float = 1.0
 
 #
@@ -455,15 +454,16 @@ def msc_vbus_etal(s: str) -> None:
     builder.get_object('msc_vbus_lvl').set_value(x)
     # print(f'can_msc_vbus_etal: Vbus={txt}')
     # Line Current
-    x: float = abs(CANDataToInt16(s[4:8]) * 0.1)
+    x = float(abs(CANDataToInt16(s[4:8]) * 0.1))
     txt = "{:.1f}".format(x)
     builder.get_object('im_i_line').set_text(txt)
     builder.get_object('im_i_line_lvl').set_value(float(txt))
     # Frequency
-    x: float = abs(CANDataToInt16(s[8:12]) * 0.1)
-    txt = "{:.1f}".format(x)
+    omega_e = float(CANDataToInt16(s[8:12]) * 0.1)
+    f_e = omega_e / (2 * math.pi)
+    txt = "{:.1f}".format(f_e)
     builder.get_object('im_fs').set_text(txt)
-    builder.get_object('im_fs_lvl').set_value(float(txt))
+    builder.get_object('im_fs_lvl').set_value(f_e)
     # Status
     status = CANDataToUInt16(s[12:16]) & 0x0f
     if status in (5, 10):
@@ -559,6 +559,8 @@ def msc_meas_2(s: str) -> None:
 def msc_meas_3(s: str) -> None:
     "Receive va, vb and vc RMS."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'rms', 0.1)
+    rpm = CANDataToInt16(s[12:16])
+    builder.get_object('msc_rpm').set_text('{:d}'.format(rpm))
 
 
 def msc_meas_4(s: str) -> None:
