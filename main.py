@@ -63,6 +63,7 @@ gsc_fgrid_nom = 60.0  # grid nominal frequency
 # MSC
 #
 msc_i_max: float = 1.0
+msc_f_max: float = 70.0
 
 #
 # Inverter
@@ -459,11 +460,19 @@ def msc_vbus_etal(s: str) -> None:
     builder.get_object('im_i_line').set_text(txt)
     builder.get_object('im_i_line_lvl').set_value(float(txt))
     # Frequency
-    omega_e = float(CANDataToInt16(s[8:12]) * 0.1)
+    omega_e = float(CANDataToInt16(s[8:12]))
+    print(f'omega_e={omega_e}')
     f_e = omega_e / (2 * math.pi)
+    f_e_max = round(f_e / 10 + 1) * 10
+    global msc_f_max
+    if f_e_max > msc_f_max:
+        msc_f_max = f_e_max
+        builder.get_object('msc_f_max').set_text('{:.0f}'.format(msc_f_max))
+        builder.get_object('im_fs_lvl').set_max_value(msc_f_max)
     txt = "{:.1f}".format(f_e)
     builder.get_object('im_fs').set_text(txt)
     builder.get_object('im_fs_lvl').set_value(f_e)
+
     # Status
     status = CANDataToUInt16(s[12:16]) & 0x0f
     if status in (5, 10):
