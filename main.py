@@ -194,6 +194,15 @@ class Handler:
             cmd = 'send {:08x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x80)
         myser.write(cmd)
 
+    def on_msc_get_offsets_clicked(self, wdg):
+        cmd = 'send {:08x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x300)
+        myser.write(cmd)
+
+    def on_gsc_get_offsets_clicked(self, wdg):
+        cmd = 'send {:08x} {:04x}'.format(ids.GSCID_DATA_REQ, 0x300)
+        myser.write(cmd)
+
+
 def set_version(ver):
     """Set ESP32 firmware version."""
     version = builder.get_object('version')
@@ -333,13 +342,13 @@ def gsc_params_2(s: str) -> None:
     builder.get_object("gsc_vbus_max").set_text(txt)
     builder.get_object("gsc_vbus_peak").set_text(txt)
     builder.get_object("gsc_vbus_lvl").set_max_value(gsc_vbus_max)
-    #VBUS_TARGET_MAX
+    # VBUS_TARGET_MAX
     x = float(CANDataToUInt16(s[4:8]))
     builder.get_object("gsc_vbus_target_max").set_text('{:.1f}'.format(x))
-    #VBUS_TARGET_MIN
+    # VBUS_TARGET_MIN
     x = float(CANDataToUInt16(s[8:12]))
     builder.get_object("gsc_vbus_target_min").set_text('{:.1f}'.format(x))
-    #VBUS_MIN
+    # VBUS_MIN
     x = float(CANDataToUInt16(s[12:16]))
     builder.get_object("gsc_vbus_min").set_text('{:.1f}'.format(x))
 
@@ -427,7 +436,7 @@ def can_gsc_adc_2(s):
     builder_set(s[12:16], 'gsc_adc_b4')
     # no copies
 
-    
+
 def can_gsc_adc_3(s):
     """Set ADC group 2: ADC_C14, ADC_C2 .. 4."""
     if not len(s) == 16:
@@ -440,6 +449,19 @@ def can_gsc_adc_3(s):
     # copies
     builder_set(s[4:8], 'gsc_adc_c2_')
     builder_set(s[12:16], 'gsc_adc_c4_')
+
+
+def gsc_offset_1(s):
+    builder_set(s[0:4], 'vga_off', k=0.1, n_dec=1)
+    builder_set(s[4:8], 'vgb_off', k=0.1, n_dec=1)
+    builder_set(s[8:12], 'vgc_off', k=0.1, n_dec=1)
+    builder_set(s[12:16], 'gsc_vbus_off', k=0.1, n_dec=1)
+
+
+def gsc_offset_2(s):
+    builder_set(s[0:4], 'ila_off', k=0.1, n_dec=1)
+    builder_set(s[4:8], 'ilb_off', k=0.1, n_dec=1)
+    builder_set(s[8:12], 'ilc_off', k=0.1, n_dec=1)
 
 
 def msc_vbus_etal(s: str) -> None:
@@ -511,30 +533,6 @@ def msc_params_1(s: str) -> None:
     builder.get_object('msc_i_max').set_text(i_max)
     builder.get_object('im_i_max').set_text(i_max)
     builder.get_object('im_i_line_lvl').set_max_value(msc_i_max)
-    # i rms
-    i_rms_max = msc_i_max * 1.1
-    builder.get_object('i_rms_range').set_text('0  ...  {:-6.1f}'.format(i_rms_max))
-    builder.get_object('ia_rms_lvl').set_max_value(i_rms_max)
-    builder.get_object('ib_rms_lvl').set_max_value(i_rms_max)
-    builder.get_object('ic_rms_lvl').set_max_value(i_rms_max)
-    # i avg
-    i_avg_max = msc_i_max * 1.1
-    builder.get_object('i_avg_range').set_text('0  ...  {:-6.1f}'.format(i_avg_max))
-    builder.get_object('ia_avg_lvl').set_max_value(i_avg_max)
-    builder.get_object('ib_avg_lvl').set_max_value(i_avg_max)
-    builder.get_object('ic_avg_lvl').set_max_value(i_avg_max)
-    # v rms
-    v_rms_max = msc_v_nom * 1.25
-    builder.get_object('v_rms_range').set_text('0  ...  {:-6.1f}'.format(v_rms_max))
-    builder.get_object('va_rms_lvl').set_max_value(v_rms_max)
-    builder.get_object('vb_rms_lvl').set_max_value(v_rms_max)
-    builder.get_object('vc_rms_lvl').set_max_value(v_rms_max)
-    # v avg
-    v_avg_max = msc_v_nom * 1.1
-    builder.get_object('v_avg_range').set_text('0  ...  {:-6.1f}'.format(v_avg_max))
-    builder.get_object('va_avg_lvl').set_max_value(v_avg_max)
-    builder.get_object('vb_avg_lvl').set_max_value(v_avg_max)
-    builder.get_object('vc_avg_lvl').set_max_value(v_avg_max)
 
 
 def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
@@ -542,7 +540,7 @@ def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
     for ph in ['a', 'b', 'c']:
         x = CANDataToInt16(s[i]) * k
         builder.get_object(name + ph + '_' + meas).set_text('{:.1f}'.format(x))
-        builder.get_object(name + ph + '_' + meas + '_lvl').set_value(x)
+        # builder.get_object(name + ph + '_' + meas + '_lvl').set_value(x)
         i += 1
 
 
@@ -576,6 +574,7 @@ def msc_meas_4(s: str) -> None:
     "Receive ia, ib and ic average."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'v', 'avg', 0.1)
 
+
 def msc_adc_a(s: str) -> None:
     builder_set(s[0:4], 'msc_adc_a1')
     builder_set(s[4:8], 'msc_adc_a2')
@@ -587,11 +586,13 @@ def msc_adc_a(s: str) -> None:
     builder_set(s[8:12], "msc_adc_a3_")
     builder_set(s[12:16], "msc_adc_a4_")
 
+
 def msc_adc_b(s: str) -> None:
     builder_set(s[0:4], 'msc_adc_b14')
     builder_set(s[4:8], 'msc_adc_b2')
     builder_set(s[8:12], 'msc_adc_b3')
     builder_set(s[12:16], 'msc_adc_b4')
+
 
 def msc_adc_c(s: str) -> None:
     builder_set(s[0:4], 'msc_adc_c14')
@@ -601,6 +602,21 @@ def msc_adc_c(s: str) -> None:
     # copies
     builder_set(s[4:8], 'msc_adc_c2_')
     builder_set(s[12:16], 'msc_adc_c4_')
+
+
+def msc_offset_1(s):
+    builder_set(s[0:4], 'e_ab_off', k=0.1, n_dec=1)
+    builder_set(s[4:8], 'e_bc_off', k=0.1, n_dec=1)
+    builder_set(s[8:12], 'e_ca_off', k=0.1, n_dec=1)
+    builder_set(s[12:16], 'msc_vbus_off', k=0.1, n_dec=1)
+
+
+def msc_offset_2(s):
+    builder_set(s[0:4], 'i_a_off', k=0.1, n_dec=1)
+    builder_set(s[4:8], 'i_b_off', k=0.1, n_dec=1)
+    builder_set(s[8:12], 'i_c_off', k=0.1, n_dec=1)
+    theta_off = CANDataToUInt16(s[12:16]) * 0.1 * 180 / math.pi
+    builder.get_object('theta_off').set_text('{:.1f}°'.format(theta_off))
 
 
 can_ids = [
@@ -616,6 +632,8 @@ can_ids = [
     [ids.GSCID_ADCA, can_gsc_adc_1, "ADC A raw values"],
     [ids.GSCID_ADCB, can_gsc_adc_2, "ADC B raw values"],
     [ids.GSCID_ADCC, can_gsc_adc_3, "ADC C raw values"],
+    [ids.GSCID_OFF_1, gsc_offset_1, "GSC offset values 1"],
+    [ids.GSCID_OFF_2, gsc_offset_2, "GSC offset values 2"],
     # From MSC:
     [ids.MSCID_VBUS_N_STATUS, msc_vbus_etal, "Vbus LineCurrent Freq Status"],
     [ids.MSCID_HS_TEMP, msc_hs_temp, "MSC Heatsink temperature °C"],
@@ -626,7 +644,9 @@ can_ids = [
     [ids.MSCID_MEAS_4, msc_meas_4, "MSC measurements group 4"],
     [ids.MSCID_ADCA, msc_adc_a, "MSC ADC A raw values"],
     [ids.MSCID_ADCB, msc_adc_b, "MSC ADC B raw values"],
-    [ids.MSCID_ADCC, msc_adc_c, "MSC ADC C raw values"]
+    [ids.MSCID_ADCC, msc_adc_c, "MSC ADC C raw values"],
+    [ids.MSCID_OFF_1, msc_offset_1, "GSC offset values 1"],
+    [ids.MSCID_OFF_2, msc_offset_2, "GSC offset values 2"],
 ]
 
 
