@@ -142,10 +142,15 @@ class Handler:
         # global gsc_adc_raw
         if wdg.get_active():
             print('ADC raw active')
-            myser.write('send {:08x} 0040'.format(ids.GSCID_DATA_REQ))
+            myser.write('send {:04x} 0040'.format(ids.GSCID_DATA_REQ))
         else:
             print('ADC raw inactive')
-            myser.write('send {:08x} 0080'.format(ids.GSCID_DATA_REQ))
+            myser.write('send {:04x} 0080'.format(ids.GSCID_DATA_REQ))
+
+    def on_gsc_max_power_value_changed(self, wdg):
+        """Send maximum output power in p.u."""
+        v = wdg.get_value()
+        myser.write('send {:04x} {:04x}'.format(ids.GSCID_MAX_POWER, int(v * 1000)))
 
     #
     # MSC
@@ -153,7 +158,7 @@ class Handler:
     def on_msc_stop_clicked(self, _btn):
         msc_i_ref = self.builder.get_object('msc_i_ref')
         msc_i_ref.set_value(0.0)
-        myser.write('send E000205 0000')
+        myser.write('send {:04x} 0000'.format(ids.MSCID_CURR_REF))
 
     def on_adj_op_current_value_changed(self, wdg):
         x = wdg.get_value()
@@ -161,10 +166,11 @@ class Handler:
         i_ref = (x * 10)
         if i_ref < 0:
             i_ref = 0xffff + i_ref
-        cmd = 'send 0e000205 {:04x}'.format(int(i_ref))
+        cmd = 'send {:04x} {:04x}'.format(ids.MSCID_CURR_REF, int(i_ref))
         myser.write(cmd)
 
     def on_inv_active_toggled(self, wdg):
+        "Send command to Tupã module"
         global inv_active
         inv_active = wdg.get_active()
         cmd = 'inv {} {:02}'.format('1' if inv_active else '0', inv_da)
@@ -176,6 +182,7 @@ class Handler:
         myser.write(cmd)
 
     def on_inv_da_value_changed(self, wdg):
+        "Send command to Tupã module"
         global inv_da
         inv_da = int(wdg.get_value())
         if inv_active:
@@ -189,17 +196,17 @@ class Handler:
 
     def on_msc_adc_raw_toggled(self, wdg):
         if wdg.get_active():
-            cmd = 'send {:08x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x40)
+            cmd = 'send {:04x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x40)
         else:
-            cmd = 'send {:08x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x80)
+            cmd = 'send {:04x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x80)
         myser.write(cmd)
 
     def on_msc_get_offsets_clicked(self, wdg):
-        cmd = 'send {:08x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x300)
+        cmd = 'send {:04x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x300)
         myser.write(cmd)
 
     def on_gsc_get_offsets_clicked(self, wdg):
-        cmd = 'send {:08x} {:04x}'.format(ids.GSCID_DATA_REQ, 0x300)
+        cmd = 'send {:04x} {:04x}'.format(ids.GSCID_DATA_REQ, 0x300)
         myser.write(cmd)
 
 
@@ -209,9 +216,9 @@ def set_version(ver):
     version.set_text('Version: {}'.format(ver[1]))
     # Taking a chance to get parameters:
     print('INFO: sending MSC parameters request')
-    myser.write('send {:08x} 0001'.format(ids.MSCID_DATA_REQ))
+    myser.write('send {:04x} 0001'.format(ids.MSCID_DATA_REQ))
     print('INFO: sending GSC parameters group 1 and 2 request')
-    myser.write('send {:08x} 0003'.format(ids.GSCID_DATA_REQ))
+    myser.write('send {:04x} 0003'.format(ids.GSCID_DATA_REQ))
 
 
 def str_to_size(s: str, size: int) -> str:
@@ -714,10 +721,10 @@ def write_thread():
             continue
         if i == 1:
             # MSC meas group 1, 2, 3 and 4
-            myser.write('send {:08x} 003c'.format(ids.MSCID_DATA_REQ))
+            myser.write('send {:04x} 003c'.format(ids.MSCID_DATA_REQ))
         elif i == 2:
             # GSC meas group 1, 2, 3 and 4
-            myser.write('send {:08x} 003c'.format(ids.GSCID_DATA_REQ)) # meas group 1
+            myser.write('send {:04x} 003c'.format(ids.GSCID_DATA_REQ)) # meas group 1
             # Go to MSC again
             i = 0
         else:
