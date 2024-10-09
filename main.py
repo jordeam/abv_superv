@@ -15,7 +15,7 @@ import time
 from threading import Thread
 import struct
 import ctypes
-from termcolor import colored
+# from termcolor import colored
 import gi
 from canserial import CanSerial
 import twai_ids as ids
@@ -31,10 +31,9 @@ SPEED_MAX = 1200
 CURRENT_MAX = 50.0
 
 
-
 # Global parameters
 
-running_states = ['INIT', 'OFFSET', 'PLL', 'ENC_CAL', 'READY', 'RUNNING', 'OVERHEAT', 'OPENPHASE', 'HIGH_VBUS', 'ENC_FAIL', 'DISCHARGE']
+running_states = ['INIT', 'OFFSET', 'PLL', 'ENC_CAL', 'READY', 'RUNNING', 'OVERHEAT', 'OPENPHASE', 'HIGH_VBUS', 'ENC_FAIL', 'DISCHARGE', 'I_IMBALANCE']
 
 gsc_vbus = 0.0
 gsc_vbus_max = 0.0  # Maximum bus voltage
@@ -156,11 +155,13 @@ class Handler:
     # MSC
     #
     def on_msc_stop_clicked(self, _btn):
+        """Button stop clicked."""
         msc_i_ref = self.builder.get_object('msc_i_ref')
         msc_i_ref.set_value(0.0)
         myser.write('send {:04x} 0000'.format(ids.MSCID_CURR_REF))
 
     def on_adj_op_current_value_changed(self, wdg):
+        """Current reference for MSC convert."""
         x = wdg.get_value()
         print(f'set: msc_i_ref={x}')
         i_ref = (x * 10)
@@ -170,7 +171,7 @@ class Handler:
         myser.write(cmd)
 
     def on_inv_active_toggled(self, wdg):
-        "Send command to Tupã module"
+        """Send command to Tupã module."""
         global inv_active
         inv_active = wdg.get_active()
         cmd = 'inv {} {:02}'.format('1' if inv_active else '0', inv_da)
@@ -182,7 +183,7 @@ class Handler:
         myser.write(cmd)
 
     def on_inv_da_value_changed(self, wdg):
-        "Send command to Tupã module"
+        """Send command to Tupã module."""
         global inv_da
         inv_da = int(wdg.get_value())
         if inv_active:
@@ -208,6 +209,18 @@ class Handler:
     def on_gsc_get_offsets_clicked(self, wdg):
         cmd = 'send {:04x} {:04x}'.format(ids.GSCID_DATA_REQ, 0x300)
         myser.write(cmd)
+
+    def on_gsc_init_toggled(self, wdg):
+        status = wdg.get_active()
+        print(f'status init={status}')
+        if status:
+            myser.write('send {:04x} 00'.format(ids.GSCID_CONTROL_MODE))
+
+    def on_gsc_discharge_toggled(self, wdg):
+        status = wdg.get_active()
+        print(f'status discharge ={status}')
+        if status:
+            myser.write('send {:04x} 01'.format(ids.GSCID_CONTROL_MODE))
 
 
 def set_version(ver):
@@ -289,9 +302,9 @@ def gsc_vbus_n_status(s):
     if status in (5, 10):
         builder.get_object('gsc_inv_enabled').set_active(True)
     if status < len(running_states):
-        builder.get_object('gsc_state').set_text(running_states[status])
+        builder.get_object('gsc_state').set_text(f'{running_states[status]} ({status})')
     else:
-        builder.get_object('gsc_state').set_text('???')
+        builder.get_object('gsc_state').set_text(f'??? status={status}')
 
 
 def set_gsc_hs_temp(s):
