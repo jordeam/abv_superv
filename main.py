@@ -439,10 +439,10 @@ def can_gsc_adc_1(s):
     builder_set(s[8:12], "gsc_adc_a3")
     builder_set(s[12:16], "gsc_adc_a4")
     # copies
-    builder_set(s[0:4], "gsc_adc_a1_")
-    builder_set(s[4:8], "gsc_adc_a2_")
-    builder_set(s[8:12], "gsc_adc_a3_")
-    builder_set(s[12:16], "gsc_adc_a4_")
+    # builder_set(s[0:4], "gsc_adc_a1_")
+    # builder_set(s[4:8], "gsc_adc_a2_")
+    # builder_set(s[8:12], "gsc_adc_a3_")
+    # builder_set(s[12:16], "gsc_adc_a4_")
 
 
 def can_gsc_adc_2(s):
@@ -467,8 +467,8 @@ def can_gsc_adc_3(s):
     builder_set(s[8:12], 'gsc_adc_c3')
     builder_set(s[12:16], 'gsc_adc_c4')
     # copies
-    builder_set(s[4:8], 'gsc_adc_c2_')
-    builder_set(s[12:16], 'gsc_adc_c4_')
+    # builder_set(s[4:8], 'gsc_adc_c2_')
+    # builder_set(s[12:16], 'gsc_adc_c4_')
 
 
 def gsc_offset_1(s):
@@ -601,10 +601,10 @@ def msc_adc_a(s: str) -> None:
     builder_set(s[8:12], 'msc_adc_a3')
     builder_set(s[12:16], 'msc_adc_a4')
     # copies
-    builder_set(s[0:4], "msc_adc_a1_")
-    builder_set(s[4:8], "msc_adc_a2_")
-    builder_set(s[8:12], "msc_adc_a3_")
-    builder_set(s[12:16], "msc_adc_a4_")
+    # builder_set(s[0:4], "msc_adc_a1_")
+    # builder_set(s[4:8], "msc_adc_a2_")
+    # builder_set(s[8:12], "msc_adc_a3_")
+    # builder_set(s[12:16], "msc_adc_a4_")
 
 
 def msc_adc_b(s: str) -> None:
@@ -620,8 +620,8 @@ def msc_adc_c(s: str) -> None:
     builder_set(s[8:12], 'msc_adc_c3')
     builder_set(s[12:16], 'msc_adc_c4')
     # copies
-    builder_set(s[4:8], 'msc_adc_c2_')
-    builder_set(s[12:16], 'msc_adc_c4_')
+    # builder_set(s[4:8], 'msc_adc_c2_')
+    # builder_set(s[12:16], 'msc_adc_c4_')
 
 
 def msc_offset_1(s):

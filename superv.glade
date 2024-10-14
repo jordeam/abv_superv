@@ -53,15 +53,6 @@
     <property name="page-increment">10</property>
     <signal name="value-changed" handler="on_inv_da_value_changed" swapped="no"/>
   </object>
-  <object class="GtkTextBuffer" id="text_status">
-    <property name="text" translatable="yes">a
-s
-d
-f
-g
-h
-</property>
-  </object>
   <object class="GtkWindow" id="window1">
     <property name="can-focus">False</property>
     <property name="resizable">False</property>
@@ -2040,6 +2031,8 @@ h
                               <object class="GtkFrame">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
+                                <property name="margin-start">5</property>
+                                <property name="margin-bottom">5</property>
                                 <property name="label-xalign">0.05000000074505806</property>
                                 <child>
                                   <!-- n-columns=2 n-rows=6 -->
@@ -2207,6 +2200,8 @@ h
                               <object class="GtkFrame">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
+                                <property name="margin-start">5</property>
+                                <property name="margin-bottom">5</property>
                                 <property name="label-xalign">0.05000000074505806</property>
                                 <child>
                                   <!-- n-columns=2 n-rows=6 -->
@@ -2374,6 +2369,8 @@ h
                               <object class="GtkFrame">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
+                                <property name="margin-start">5</property>
+                                <property name="margin-bottom">5</property>
                                 <property name="label-xalign">0.05000000074505806</property>
                                 <child>
                                   <object class="GtkBox">
@@ -2564,6 +2561,8 @@ h
                               <object class="GtkFrame">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
+                                <property name="margin-start">5</property>
+                                <property name="margin-bottom">5</property>
                                 <property name="label-xalign">0.05000000074505806</property>
                                 <child>
                                   <object class="GtkBox">
@@ -2769,7 +2768,7 @@ h
                                   <object class="GtkLabel">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
-                                    <property name="label" translatable="yes">&lt;b&gt;RMS&lt;/b&gt;</property>
+                                    <property name="label" translatable="yes">&lt;b&gt;Offsets&lt;/b&gt;</property>
                                     <property name="use-markup">True</property>
                                   </object>
                                 </child>
@@ -3148,7 +3147,7 @@ h
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
                                     <property name="margin-start">5</property>
-                                    <property name="margin-bottom">4</property>
+                                    <property name="margin-bottom">5</property>
                                     <property name="label-xalign">0.05000000074505806</property>
                                     <child>
                                       <!-- n-columns=2 n-rows=6 -->
@@ -3319,7 +3318,7 @@ h
                                         <property name="can-focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="GtkButton" id="msc_get_offsets1">
+                                          <object class="GtkButton" id="msc_get_offsets">
                                             <property name="label" translatable="yes">Get offsets</property>
                                             <property name="visible">True</property>
                                             <property name="can-focus">True</property>
@@ -3556,7 +3555,7 @@ h
                                         <property name="can-focus">False</property>
                                         <property name="orientation">vertical</property>
                                         <child>
-                                          <object class="GtkCheckButton" id="msc_adc_raw1">
+                                          <object class="GtkCheckButton" id="msc_adc_raw">
                                             <property name="label" translatable="yes">get ADC raw data</property>
                                             <property name="visible">True</property>
                                             <property name="can-focus">True</property>
@@ -3950,5 +3949,14 @@ h
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkTextBuffer" id="text_status">
+    <property name="text" translatable="yes">a
+s
+d
+f
+g
+h
+</property>
   </object>
 </interface>
