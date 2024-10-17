@@ -63,6 +63,7 @@ gsc_fgrid_nom = 60.0  # grid nominal frequency
 #
 msc_i_max: float = 1.0
 msc_f_max: float = 70.0
+msc_v_nom = 10
 
 #
 # Inverter
@@ -537,7 +538,7 @@ def msc_hs_temp(s: str) -> None:
 
 def msc_params_1(s: str) -> None:
     "Receive PMSM i_nom, v_nom, fs_min ans i_max."
-    global msc_i_max, msc_v_mon
+    global msc_i_max, msc_v_nom
     if not len(s) == 16:
         print(f'ERROR: msc_params_1: s={s} has not 16 chars')
         return
