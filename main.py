@@ -43,7 +43,7 @@ gsc_vbus_min = 0.0
 
 gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
-gsc_power_max = 275e3  # Maximum allowed active power to be injected
+gsc_power_max = 330e3  # Maximum allowed active power to be injected
 gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
 gsc_vgrid_max = 480.0  # Maximum grid voltage
@@ -70,6 +70,7 @@ msc_v_nom = 10
 #
 inv_da: int = 0
 inv_active: bool = False
+
 
 def rad2rpm(rad):
     """Convert radian value to degree value."""
@@ -203,11 +204,11 @@ class Handler:
             cmd = 'send {:04x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x80)
         myser.write(cmd)
 
-    def on_msc_get_offsets_clicked(self, wdg):
+    def on_msc_get_offsets_clicked(self, _):
         cmd = 'send {:04x} {:04x}'.format(ids.MSCID_DATA_REQ, 0x300)
         myser.write(cmd)
 
-    def on_gsc_get_offsets_clicked(self, wdg):
+    def on_gsc_get_offsets_clicked(self, _):
         cmd = 'send {:04x} {:04x}'.format(ids.GSCID_DATA_REQ, 0x300)
         myser.write(cmd)
 
@@ -293,10 +294,10 @@ def gsc_vbus_n_status(s):
     builder.get_object('gsc_i_line').set_text(txt)
     builder.get_object('gsc_i_line_lvl').set_value(i_rms)
     # Output power
-    p_out = CANDataToInt16(s[8:12]) * 0.1
+    p_out = CANDataToInt16(s[8:12]) * 10
     txt = '{:.1f}'.format(p_out)
     builder.get_object('gsc_power').set_text(txt)
-    builder.get_object('gsc_power_lvl').set_value(p_out)
+    builder.get_object('gsc_power_lvl').set_value(p_out / gsc_power_max)
     # Status
     # Status
     status = CANDataToUInt16(s[12:16]) & 0x0f
@@ -326,7 +327,7 @@ def gsc_params_1(s):
     Parameters group 1
     target_fp, vgrid_nom, max_peak_current, droop_coef
     """
-    global gsc_power_max
+    # global gsc_power_max
     global gsc_i_max, gsc_i_min, gsc_f_nom
     if not len(s) == 12:
         print(f'ERROR: gsc_params_1: s={s} has not 12 chars')
@@ -337,9 +338,8 @@ def gsc_params_1(s):
     builder.get_object("gsc_i_line_max").set_text(txt)
     builder.get_object("gsc_i_line_lvl").set_max_value(gsc_i_max)
     if gsc_vbus_max != 0:
-        gsc_power_max = gsc_vbus_max * gsc_i_max
         builder.get_object('gsc_power_max').set_text('{:.1f}'.format(gsc_power_max))
-        builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
+        # builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
     gsc_i_min = float(CANDataToInt16(s[4:8]))
     builder.get_object('gsc_i_min').set_text('{:.1f}'.format(gsc_i_min))
     gsc_f_nom = float(CANDataToInt16(s[8:12]))
@@ -350,15 +350,14 @@ def gsc_params_2(s: str) -> None:
     """
     Parameters group 2
     """
-    global gsc_power_max, gsc_vbus_max
+    global gsc_vbus_max
     if not len(s) == 16:
         print(f'ERROR: gsc_params_2: s={s} has not 16 chars')
     # VBUS_MAX
     gsc_vbus_max = float(CANDataToUInt16(s[0:4]))
     if gsc_i_max != 0:
-        gsc_power_max = gsc_vbus_max * gsc_i_max
         builder.get_object('gsc_power_max').set_text('{:.0f}'.format(gsc_power_max))
-        builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
+        # builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
     txt = '{:.1f}'.format(gsc_vbus_max)
     builder.get_object("gsc_vbus_max").set_text(txt)
     builder.get_object("gsc_vbus_peak").set_text(txt)
