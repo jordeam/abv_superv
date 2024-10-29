@@ -33,7 +33,7 @@ CURRENT_MAX = 50.0
 
 # Global parameters
 
-running_states = ['INIT', 'OFFSET', 'PLL', 'ENC_CAL', 'READY', 'RUNNING', 'OVERHEAT', 'OPENPHASE', 'HIGH_VBUS', 'ENC_FAIL', 'DISCHARGE', 'I_IMBALANCE']
+running_states = ['INIT', 'OFFSET', 'PLL', 'ENC_CAL', 'READY', 'RUNNING', 'OVERHEAT', 'OPENPHASE', 'HIGH_VBUS', 'ENC_FAIL', 'DISCHARGE', 'I_IMBALANCE', 'V_IMBALANCE']
 
 gsc_vbus = 0.0
 gsc_vbus_max = 0.0  # Maximum bus voltage
@@ -280,33 +280,27 @@ def gsc_vbus_n_status(s):
     """
     # global builder
     global gsc_vbus, gsc_status
-    if not len(s) == 16:
-        print(f'ERROR: gsc_vbus_n_status: s={s} has not 16 chars')
-    gsc_vbus = CANDataToInt16(s[0:4]) * 0.1
-    gsc_status = CANDataToUInt16(s[12:16])
-    # Vbus
+    if not len(s) == 10:
+        print(f'ERROR: gsc_vbus_n_status: s={s} has not 10 chars')
+    # P_out and status
+    data = CANDataToUInt16(s[0:4])
+    gsc_vbus = data * 0.1
     txt = '{:.1f}'.format(gsc_vbus)
     builder.get_object('gsc_vbus').set_text(txt)
     builder.get_object('gsc_vbus_lvl').set_value(gsc_vbus)
-    # i_rms
-    i_rms = CANDataToUInt16(s[4:8]) * 0.1
-    txt = '{:.1f}'.format(i_rms)
-    builder.get_object('gsc_i_line').set_text(txt)
-    builder.get_object('gsc_i_line_lvl').set_value(i_rms)
-    # Output power
-    p_out = CANDataToInt16(s[8:12]) * 10
+    # print('data={:d} 0x{:x}'.format(data, data))
+    data = CANDataToUInt16(s[4:8])
+    p_out = data * 100.0
     txt = '{:.1f}'.format(p_out)
     builder.get_object('gsc_power').set_text(txt)
     builder.get_object('gsc_power_lvl').set_value(p_out / gsc_power_max)
-    # Status
-    # Status
-    status = CANDataToUInt16(s[12:16]) & 0x0f
-    if status in (5, 10):
+    gsc_status = struct.unpack("!B", bytes.fromhex(s[8:10]))[0]
+    if gsc_status in (5, 10):
         builder.get_object('gsc_inv_enabled').set_active(True)
-    if status < len(running_states):
-        builder.get_object('gsc_state').set_text(f'{running_states[status]} ({status})')
+    if gsc_status < len(running_states):
+        builder.get_object('gsc_state').set_text(f'{running_states[gsc_status]} ({gsc_status})')
     else:
-        builder.get_object('gsc_state').set_text(f'??? status={status}')
+        builder.get_object('gsc_state').set_text(f'??? status={gsc_status}')
 
 
 def set_gsc_hs_temp(s):
@@ -335,8 +329,6 @@ def gsc_params_1(s):
     gsc_i_max = float(CANDataToInt16(s[0:4]))
     txt = "{:.1f}".format(gsc_i_max)
     builder.get_object("gsc_i_max").set_text(txt)
-    builder.get_object("gsc_i_line_max").set_text(txt)
-    builder.get_object("gsc_i_line_lvl").set_max_value(gsc_i_max)
     if gsc_vbus_max != 0:
         builder.get_object('gsc_power_max').set_text('{:.1f}'.format(gsc_power_max))
         # builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
@@ -376,6 +368,7 @@ def gsc_params_2(s: str) -> None:
 def gsc_meas_1(s):
     """
     Measures group 1
+    ila_rms, ilb_rms, ilc_rms, gsc_i_imbalance
     """
     # global builder
     if not len(s) == 16:
@@ -383,13 +376,13 @@ def gsc_meas_1(s):
     builder_set(s[0:4], 'ila_rms', 0.1, 1)
     builder_set(s[4:8], 'ilb_rms', 0.1, 1)
     builder_set(s[8:12], 'ilc_rms', 0.1, 1)
-    builder_set(s[12:16], 'gsc_imbalance', 1e-1, 1)
+    builder_set(s[12:16], 'gsc_i_imbalance')
 
 
 def gsc_meas_2(s):
     """
     Measures group 1 pt 2.
-    vga_rms, vgb_rms, vgc_rms, ila_avg
+    vga_rms, vgb_rms, vgc_rms, ila_avg, ilb_avg, ilc_avg
     """
     # global builder
     if not len(s) == 12:
@@ -403,15 +396,16 @@ def gsc_meas_2(s):
 def gsc_meas_3(s):
     """
     Measures group 1 pt 2.
-    vga_rms, vgb_rms, vgc_rms, ila_avg
+    vga_rms, vgb_rms, vgc_rms, gsc_v_imbalance
     """
     # global builder
-    if not len(s) == 12:
-        print(f'ERROR: gsc_meas_3: s={s} has not 12 chars')
+    if not len(s) == 16:
+        print(f'ERROR: gsc_meas_3: s={s} has not 16 chars')
         return
     builder_set(s[0:4], 'vga_rms', 0.1, 1)
     builder_set(s[4:8], 'vgb_rms', 0.1, 1)
     builder_set(s[8:12], 'vgc_rms', 0.1, 1)
+    builder_set(s[12:16], 'gsc_v_imbalance')
 
 
 def gsc_meas_4(s):
