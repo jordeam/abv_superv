@@ -43,7 +43,7 @@ gsc_vbus_min = 0.0
 
 gsc_power = 220e3  # injected active power
 gsc_power_nom = 250e3  # Nominal active power to be injected
-gsc_power_max = 330e3  # Maximum allowed active power to be injected
+gsc_power_max = 300e3  # Maximum allowed active power to be injected
 gsc_vgrid_nom = 380.0  # grid nominal voltage
 gsc_vgrid = 372.0  # Grid measured voltage
 gsc_vgrid_max = 480.0  # Maximum grid voltage
@@ -290,10 +290,13 @@ def gsc_vbus_n_status(s):
     builder.get_object('gsc_vbus_lvl').set_value(gsc_vbus)
     # print('data={:d} 0x{:x}'.format(data, data))
     data = CANDataToUInt16(s[4:8])
-    p_out = data * 100.0
+    p_out = data * 0.1
     txt = '{:.1f}'.format(p_out)
     builder.get_object('gsc_power').set_text(txt)
-    builder.get_object('gsc_power_lvl').set_value(p_out / gsc_power_max)
+    builder.get_object('gsc_power_lvl').set_value(p_out)
+    builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max * 0.001)
+    builder.get_object('gsc_power_max').set_text('{:.0f}kW'.format(gsc_power_max * 0.001))
+
     gsc_status = struct.unpack("!B", bytes.fromhex(s[8:10]))[0]
     if gsc_status in (5, 10):
         builder.get_object('gsc_inv_enabled').set_active(True)
@@ -348,7 +351,7 @@ def gsc_params_2(s: str) -> None:
     # VBUS_MAX
     gsc_vbus_max = float(CANDataToUInt16(s[0:4]))
     if gsc_i_max != 0:
-        builder.get_object('gsc_power_max').set_text('{:.0f}'.format(gsc_power_max))
+        builder.get_object('gsc_power_max').set_text('{:.0f}kW'.format(gsc_power_max))
         # builder.get_object('gsc_power_lvl').set_max_value(gsc_power_max)
     txt = '{:.1f}'.format(gsc_vbus_max)
     builder.get_object("gsc_vbus_max").set_text(txt)
@@ -485,38 +488,46 @@ def msc_vbus_etal(s: str) -> None:
         return
     # print('can_msc_vbus_etal:')
     # Vbus
-    x = abs(CANDataToInt16(s[0:4]) * 0.1)
+    x = abs(CANDataToUInt16(s[0:4]) * 0.1)
     txt = "{:.1f}".format(x)
     builder.get_object('msc_vbus').set_text(txt)
     builder.get_object('msc_vbus_lvl').set_value(x)
     # print(f'can_msc_vbus_etal: Vbus={txt}')
     # Line Current
-    x = float(abs(CANDataToInt16(s[4:8]) * 0.1))
-    txt = "{:.1f}".format(x)
-    builder.get_object('im_i_line').set_text(txt)
-    builder.get_object('im_i_line_lvl').set_value(float(txt))
+    x = CANDataToUInt16(s[4:8]) * 0.1
+    txt = "{:.1f}kW".format(x)
+    builder.get_object('msc_pout').set_text(txt)
+    builder.get_object('msc_pout_lvl').set_value(x)
     # Frequency
-    omega_e = float(CANDataToInt16(s[8:12]))
-    print(f'omega_e={omega_e}')
-    f_e = omega_e / (2 * math.pi)
+    d = int(CANDataToUInt16(s[8:12]))
+    f_e = d >> 7
+    print(f'f_e={f_e}')
     f_e_max = round(f_e / 10 + 1) * 10
     global msc_f_max
     if f_e_max > msc_f_max:
-        msc_f_max = f_e_max
+        msc_f_max = math.ceil(f_e_max)
         builder.get_object('msc_f_max').set_text('{:.0f}'.format(msc_f_max))
-        builder.get_object('im_fs_lvl').set_max_value(msc_f_max)
+        builder.get_object('msc_fs_lvl').set_max_value(msc_f_max)
     txt = "{:.1f}".format(f_e)
-    builder.get_object('im_fs').set_text(txt)
-    builder.get_object('im_fs_lvl').set_value(f_e)
+    builder.get_object('msc_fs').set_text(txt)
+    builder.get_object('msc_fs_lvl').set_value(f_e)
 
     # Status
-    status = CANDataToUInt16(s[12:16]) & 0x0f
-    if status in (5, 10):
-        builder.get_object('inv1_enabled').set_active(True)
+    status = d & 0x0f
     if status < len(running_states):
         builder.get_object('msc_state').set_text(running_states[status])
     else:
         builder.get_object('msc_state').set_text('???')
+
+    # PLL good
+    builder.get_object('pll_good').set_active(d & (1 << 6))
+    builder.get_object('enc_inv').set_active(d & (1 << 5))
+    builder.get_object('enc_cal').set_active(d & (1 << 4))
+
+    # V imbalance
+    d = CANDataToUInt16(s[12:16])
+    x = d * 0.1
+    builder.get_object('msc_v_imbalance').set_text('{:.1f}'.format(x))
 
 
 def msc_hs_temp(s: str) -> None:
@@ -539,14 +550,15 @@ def msc_params_1(s: str) -> None:
     builder.get_object("msc_i_nom").set_text(i_nom)
     v_nom = CANDataToString(s[4:8], 0.1, 1)
     msc_v_nom = float(v_nom)
-    builder.get_object("msc_v_nom").set_text(v_nom)
+    builder.get_object("msc_v_nom").set_text('{:.1f}'.format(msc_v_nom))
     f_min = CANDataToString(s[8:12], 0.1, 1)
     builder.get_object('msc_f_min').set_text(f_min)
     i_max = CANDataToString(s[12:16], 0.1, 1)
     msc_i_max = float(i_max)
     builder.get_object('msc_i_max').set_text(i_max)
-    builder.get_object('im_i_max').set_text(i_max)
-    builder.get_object('im_i_line_lvl').set_max_value(msc_i_max)
+    # builder.get_object('im_i_max').set_text(i_max)
+    builder.get_object('msc_pout_lvl').set_max_value(gsc_power_max * 0.001)
+    builder.get_object('msc_pout_max').set_text('{:.0f}kW'.format(gsc_power_max * 0.001))
 
 
 def set_values_n_lvl(s: list[str], name: str, meas: str, k=1.0) -> None:
@@ -563,8 +575,8 @@ def msc_meas_1(s: str) -> None:
     # print('msc_meas_1')
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'rms', 0.1)
     # Estimated Tel
-    x = int(CANDataToInt16(s[12:16]) * 0.1)
-    builder.get_object('msc_tel').set_text('{:d}'.format(x))
+    x = CANDataToUInt16(s[12:16]) * 0.1
+    builder.get_object('msc_tel').set_text('{:.0f}N.m'.format(x))
     builder.get_object('msc_tel_lvl').set_value(x)
 
 
@@ -572,7 +584,7 @@ def msc_meas_2(s: str) -> None:
     "Receive ia, ib, ic average and encoder."
     set_values_n_lvl([s[0:4], s[4:8], s[8:12]], 'i', 'avg', 0.1)
     # Encoder
-    x = CANDataToInt16(s[12:16])
+    x = CANDataToUInt16(s[12:16])
     builder.get_object('msc_enc').set_text('{:d}'.format(x))
     builder.get_object('msc_enc_lvl').set_value(x)
 

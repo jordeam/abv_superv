@@ -1285,7 +1285,7 @@
                             <property name="can-focus">False</property>
                             <property name="left-padding">12</property>
                             <child>
-                              <!-- n-columns=2 n-rows=7 -->
+                              <!-- n-columns=2 n-rows=8 -->
                               <object class="GtkGrid">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
@@ -1297,7 +1297,7 @@
                                     <property name="orientation">vertical</property>
                                     <property name="homogeneous">True</property>
                                     <child>
-                                      <object class="GtkLevelBar" id="im_i_line_lvl">
+                                      <object class="GtkLevelBar" id="msc_pout_lvl">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
                                         <property name="value">0.40</property>
@@ -1325,7 +1325,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="GtkLabel" id="im_i_line">
+                                          <object class="GtkLabel" id="msc_pout">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
                                             <property name="label" translatable="yes">Value</property>
@@ -1337,7 +1337,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="GtkLabel" id="im_i_max">
+                                          <object class="GtkLabel" id="msc_pout_max">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
                                             <property name="label" translatable="yes">Max</property>
@@ -1379,7 +1379,7 @@
                                     <property name="orientation">vertical</property>
                                     <property name="homogeneous">True</property>
                                     <child>
-                                      <object class="GtkLevelBar" id="im_fs_lvl">
+                                      <object class="GtkLevelBar" id="msc_fs_lvl">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
                                         <property name="value">0.29999999999999999</property>
@@ -1408,7 +1408,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="GtkLabel" id="im_fs">
+                                          <object class="GtkLabel" id="msc_fs">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
                                             <property name="label" translatable="yes">Value</property>
@@ -1614,7 +1614,7 @@
                                   <object class="GtkLabel">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
-                                    <property name="label" translatable="yes">Corrente de linha (A): </property>
+                                    <property name="label" translatable="yes">Potência de saida (kW)</property>
                                   </object>
                                   <packing>
                                     <property name="left-attach">0</property>
@@ -1705,7 +1705,7 @@
                                   </packing>
                                 </child>
                                 <child>
-                                  <object class="GtkLabel" id="msc_tel">
+                                  <object class="GtkLabel">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
                                     <property name="label" translatable="yes">Torque estimado</property>
@@ -1725,8 +1725,7 @@
                                       <object class="GtkLevelBar" id="msc_tel_lvl">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="value">400</property>
-                                        <property name="max-value">4999</property>
+                                        <property name="max-value">1800</property>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
@@ -1751,7 +1750,7 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="GtkLabel" id="msc_te">
+                                          <object class="GtkLabel" id="msc_tel">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
                                             <property name="label" translatable="yes">Value</property>
@@ -1807,6 +1806,28 @@
                                   <packing>
                                     <property name="left-attach">1</property>
                                     <property name="top-attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">False</property>
+                                    <property name="label" translatable="yes">Desbalanceamento de tensão(%)</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">7</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="msc_v_imbalance">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">True</property>
+                                    <property name="editable">False</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">7</property>
                                   </packing>
                                 </child>
                               </object>
@@ -1879,12 +1900,12 @@
                               </packing>
                             </child>
                             <child>
-                              <!-- n-columns=2 n-rows=1 -->
+                              <!-- n-columns=2 n-rows=3 -->
                               <object class="GtkGrid">
                                 <property name="visible">True</property>
                                 <property name="can-focus">False</property>
                                 <child>
-                                  <object class="GtkCheckButton" id="inv1_enabled">
+                                  <object class="GtkCheckButton" id="pll_good">
                                     <property name="label" translatable="yes"> </property>
                                     <property name="visible">True</property>
                                     <property name="sensitive">False</property>
@@ -1901,12 +1922,59 @@
                                   <object class="GtkLabel">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
-                                    <property name="label" translatable="yes">Inversor Ativo</property>
+                                    <property name="label" translatable="yes">PLL sincronizado</property>
                                     <property name="xalign">0</property>
                                   </object>
                                   <packing>
                                     <property name="left-attach">1</property>
                                     <property name="top-attach">0</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkCheckButton" id="enc_inv">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">True</property>
+                                    <property name="receives-default">False</property>
+                                    <property name="draw-indicator">True</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">False</property>
+                                    <property name="label" translatable="yes">Encoder invertido</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">1</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkCheckButton" id="enc_cal">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">True</property>
+                                    <property name="receives-default">False</property>
+                                    <property name="draw-indicator">True</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">0</property>
+                                    <property name="top-attach">2</property>
+                                  </packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">False</property>
+                                    <property name="label" translatable="yes">Encoder calibrado</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">2</property>
                                   </packing>
                                 </child>
                               </object>
